@@ -52,8 +52,13 @@ if (NOT EXISTS ${QPOASES_INSTALL_DIR})
 endif()
 
 find_package(fcl_catkin)
-set(FCL_INCLUDE_DIRS ${fcl_catkin_INCLUDE_DIRS}/fcl_catkin)
+string(FIND "${fcl_catkin_INCLUDE_DIRS}" "fcl_catkin" OUTPUT)
+if (OUTPUT)
+  set(FCL_INCLUDE_DIRS ${fcl_catkin_INCLUDE_DIRS})
+else (OUTPUT)
+  set(FCL_INCLUDE_DIRS ${fcl_catkin_INCLUDE_DIRS}/fcl_catkin)
 include_directories(${FCL_INCLUDE_DIRS})
+endif ()
 
 add_service_files(
   FILES

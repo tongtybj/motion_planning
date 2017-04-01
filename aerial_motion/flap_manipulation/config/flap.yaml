@@ -11,7 +11,7 @@ approach_trajectory_period: 7.0
 approach_offset: 0.05 # the distance from the contact point
 
 # phase2:
-contact_thresh: 0.02
+contact_thresh: 0.02 # TODO: we need to implement a convergence method to check the contact with surface, but not the threshold
 
 # phase3:
 move_trajectory_period: 9.0
