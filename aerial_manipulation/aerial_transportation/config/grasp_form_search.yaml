@@ -17,12 +17,12 @@ object_frame_name: object
 
 # search algorithm
 search_verbose: true
-search_file_log_flag: true
+search_file_log_flag: false
 # full search
 one_side_flag: true
 res_d: 0.005
-res_delta: 0.001
-delta_valid_range: 0.087 # 5deg 
+res_phi: 0.001
+phi_valid_range: 0.087 # 5deg 
 d_valid_range: 0.03
 thrust_weight: 0.5
 torque_weight: 0.5

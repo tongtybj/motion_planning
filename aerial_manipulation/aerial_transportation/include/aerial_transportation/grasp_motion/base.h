@@ -33,34 +33,68 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include <aerial_transportation/grasp_form_searching/grasp_form_search.h>
-#include <geometry_msgs/PolygonStamped.h>
+#ifndef GRASP_MOTION_BASE_PLUGIN_H
+#define GRASP_MOTION_BASE_PLUGIN_H
 
-/*************************************************
-      note that, the origin of coordinate of
-       1) the convex polygon is the first vertex, and the x axis direction is the first side.
-       2) the clydiner is the center of the cylinder, and the y axis is the opposite of the direction from center to the first contact point.
-**************************************************/
+/* ros */
+#include <ros/ros.h>
 
-namespace grasp_form_search
+/* the aerial transportation class */
+#include <aerial_transportation/aerial_transportation.h>
+#include <aerial_transportation/ObjectConfigure.h>
+#include <aerial_robot_base/FlightNav.h>
+#include <nav_msgs/Odometry.h>
+#include <geometry_msgs/Point.h>
+#include <tf/transform_datatypes.h>
+#include <tf/LinearMath/Transform.h> /* for vector3 */
+
+class AerialTransportation;
+
+namespace grasp_motion
 {
-  namespace
+  class Base
   {
-    /* ros publisher & subscirber */
-    ros::Subscriber convex_polygonal_column_info_sub_; /* the geometric information of convex_polygon_object */
-    ros::Subscriber cylinder_info_sub_; /* the geometric information of cylinder_object */
+  public:
+    virtual void initialize(ros::NodeHandle nh, ros::NodeHandle nhp, AerialTransportation* transportator)
+    {
+      nh_ = nh;
+      nhp_ = nhp;
+      transportator_ = transportator;
+    }
 
-    std::string convex_polygonal_column_info_sub_name_;
-    std::string cylinder_info_sub_name_;
+    virtual ~Base() {}
 
-    double joint_angle_limit_; /* the limit of joint angle */
-  }
+    virtual tf::Vector3 getUavTargetApproach2DPos(tf::Vector3 object_2d_pos, double objecy_yaw)
+    {
+      return object_2d_pos;
+    }
+
+    virtual double getUavTargetApproachYaw(double object_yaw)
+    {
+      return object_yaw;
+    }
+
+    virtual bool grasp()
+    {
+      return true;
+    }
+
+    virtual bool drop()
+    {
+      return true;
+    }
+
+  protected:
+    /* ros node */
+    ros::NodeHandle nh_;
+    ros::NodeHandle nhp_;
+
+    AerialTransportation* transportator_;
+
+    virtual void rosParamInit() {}
+  };
 
 
-  void GraspFormSearch::kinematicsInit()
-  {
-    
-    convex_polygonal_column_info_sub_ = nh_.subscribe<geometry_msgs::PolygonStamped>(convex_polygonal_column_info_sub_name_, 1, &GraspFormSearch::convexPolygonalColumnInfoCallback, this);
-    cylinder_info_sub_ = nh_.subscribe<visualization_msgs::Marker>(cylinder_info_sub_name_, 1, &GraspFormSearch::cylinderInfoCallback, this);
-  }
 };
+
+#endif  // GRASP_MOTION_BASE_PLUGIN

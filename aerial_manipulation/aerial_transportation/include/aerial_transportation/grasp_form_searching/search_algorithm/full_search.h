@@ -59,10 +59,10 @@ namespace grasp_form_search
 
     /* rosparam based variables */
     bool one_side_flag_; /* only search the first side */
-    double res_delta_; /* [rad] resolution of first contact angle */
+    double res_phi_; /* [rad] resolution of first contact angle */
     double res_d_; /* [m] resolution of first contact distance */
 
-    double delta_valid_range_; /* the valid range of delta to search */
+    double phi_valid_range_; /* the valid range of phi to search */
     double d_valid_range_; /* the valid range of d to search */
 
     /* cost function: F = w_1 * max_val(F) + w_2 * max_val(tau) */

@@ -90,8 +90,8 @@ namespace grasp_form_search
     /* kinematics */
     void kinematicsInit();
     bool cylinderInitEnvelopCheck(int& contact_num);
-    bool convexPolygonNeighbourContacts(double curr_contact_d, double curr_delta, double curr_psi, double curr_side_len, double next_side_len,  double& theta /* joint_angle */, double& next_delta, Vector3d& joint_p, double& next_contact_d);
-    bool envelopingCalc(double first_contact_d, double first_delta, std::vector<double>& v_theta, std::vector<double>& v_delta, std::vector<double>& v_contact_d, std::vector<Vector3d>& v_contact_p, std::vector<Quaterniond>& v_contact_rot, std::vector<Vector3d>& v_joint_p, int start_side /* convex */);
+    bool convexPolygonNeighbourContacts(double curr_contact_d, double curr_phi, double curr_psi, double curr_side_len, double next_side_len,  double& theta /* joint_angle */, double& next_phi, Vector3d& joint_p, double& next_contact_d);
+    bool envelopingCalc(double first_contact_d, double first_phi, std::vector<double>& v_theta, std::vector<double>& v_phi, std::vector<double>& v_contact_d, std::vector<Vector3d>& v_contact_p, std::vector<Quaterniond>& v_contact_rot, std::vector<Vector3d>& v_joint_p, int start_link, int start_side /* convex */);
 
     /* statics */
     void staticsInit();
@@ -105,25 +105,41 @@ namespace grasp_form_search
 
     /* tools */
     inline boost::shared_ptr<TransformController> getUavKinematics() {return uav_kinematics_;}
-    inline std::vector<VertexHandlePtr> getObjectInfo() {return object_;}
-    inline int getObjectType() {return object_type_;}
-    inline int getSideNum() {return object_.size();}
-    inline int getContactNum() {return contact_num_;}
-    inline int getBestStartSide() {return best_start_side_;}
-    inline geometry_msgs::Inertia getObjectInertia() {return object_inertia_;}
-    inline double getLinkLength() {return link_length_;}
-    inline double getDuctRadius() {return duct_radius_;}
-    inline double getObjectRadius() {return object_radius_;}
+    inline std::vector<VertexHandlePtr> getObjectInfo()  {return object_;}
+    inline const int getObjectType() const {return object_type_;}
+    inline const int getSideNum() const {return object_.size();}
+    inline const int getContactNum() const {return contact_num_;}
+    inline const int getBestStartSide() const {return best_start_side_;}
+    inline const geometry_msgs::Inertia getObjectInertia() const {return object_inertia_;}
+    inline const double getLinkLength() const {return link_length_;}
+    inline const double getDuctRadius() const {return duct_radius_;}
+    inline const double getObjectRadius() const {return object_radius_;}
+    inline const double getBaselink() const {return baselink_;}
+
+    const std::vector<double>& getBestTheta() const {return v_best_theta_;}
+    const std::vector<double>& getValidLowerBoundTheta() const {return v_valid_lower_bound_theta_;}
+    const std::vector<double>& getValidUpperBoundTheta() const {return v_valid_upper_bound_theta_;}
+    const std::vector<double>& getBestPhi() const {return v_best_phi_;}
+    const std::vector<double>& getValidLowerBoundPhi() const {return v_valid_lower_bound_phi_;}
+    const std::vector<double>& getValidUpperBoundPhi() const {return v_valid_upper_bound_phi_;}
+    const std::vector<Vector3d>& getBestContactP() const {return v_best_contact_p_;}
+    const std::vector<Quaterniond>& getBestContactRot() const {return v_best_contact_rot_;}
+    const std::vector<Vector3d>& getBestJointP() const {return v_best_joint_p_;}
+    const std::vector<double>& getBestContactD() const {return v_best_contact_d_;}
+    const std::vector<double>& getValidLowerBoundContactD() const {return v_valid_lower_bound_contact_d_;}
+    const std::vector<double>& getValidUpperBoundContactD() const {return v_valid_upper_bound_contact_d_;}
+
+    const VectorXd& getBestTau() const {return v_best_tau_;}
 
     inline void setBestStartSide(int best_start_side){best_start_side_ = best_start_side; }
-    void setBestForceClosureResult(std::vector<double> v_best_theta, std::vector<double> v_valid_lower_bound_theta, std::vector<double> v_valid_upper_bound_theta, std::vector<double> v_best_delta, std::vector<double> v_valid_lower_bound_delta, std::vector<double> v_valid_upper_bound_delta, std::vector<Vector3d> v_best_contact_p, std::vector<Quaterniond> v_best_contact_rot, std::vector<Vector3d> v_best_joint_p, VectorXd v_best_min_f_fc, VectorXd v_best_tau, VectorXd v_best_hover_thrust)
+    void setBestForceClosureResult(std::vector<double> v_best_theta, std::vector<double> v_valid_lower_bound_theta, std::vector<double> v_valid_upper_bound_theta, std::vector<double> v_best_phi, std::vector<double> v_valid_lower_bound_phi, std::vector<double> v_valid_upper_bound_phi, std::vector<Vector3d> v_best_contact_p, std::vector<Quaterniond> v_best_contact_rot, std::vector<Vector3d> v_best_joint_p, VectorXd v_best_min_f_fc, VectorXd v_best_tau, VectorXd v_best_hover_thrust)
     {
       v_best_theta_ = v_best_theta;
       v_valid_lower_bound_theta_ = v_valid_lower_bound_theta;
       v_valid_upper_bound_theta_ = v_valid_upper_bound_theta;
-      v_best_delta_ = v_best_delta;
-      v_valid_lower_bound_delta_ = v_valid_lower_bound_delta;
-      v_valid_upper_bound_delta_ = v_valid_upper_bound_delta;
+      v_best_phi_ = v_best_phi;
+      v_valid_lower_bound_phi_ = v_valid_lower_bound_phi;
+      v_valid_upper_bound_phi_ = v_valid_upper_bound_phi;
       v_best_contact_p_ = v_best_contact_p;
       v_best_contact_rot_ = v_best_contact_rot;
       v_best_joint_p_ = v_best_joint_p;
@@ -153,8 +169,9 @@ namespace grasp_form_search
     /* main routine */
     ros::Timer  func_timer_;
     boost::shared_ptr<TransformController> uav_kinematics_;
-    double link_length_ = 0; // TODO: not good
-    double duct_radius_ = 0; // TODO: not good
+    double link_length_; // TODO: not good
+    double duct_radius_; // TODO: not good
+    int baselink_; //TODO: not good
 
     /* rosparam based variables */
     bool verbose_;
@@ -174,11 +191,11 @@ namespace grasp_form_search
     VectorXd v_best_tau_; /* final result of best tau */
     VectorXd v_best_min_f_fc_; /* final result of best contact force */
     std::vector<double> v_best_theta_; /* final result of best joint angle */
-    std::vector<double> v_best_delta_; /* the vector of tilt angles of between each link and related side */
+    std::vector<double> v_best_phi_; /* the vector of tilt angles of between each link and related side */
     std::vector<double> v_valid_lower_bound_theta_; /* final result of valid_lower_bound_ joint angle */
-    std::vector<double> v_valid_lower_bound_delta_; /* the vector of tilt angles of between each link and related side */
+    std::vector<double> v_valid_lower_bound_phi_; /* the vector of tilt angles of between each link and related side */
     std::vector<double> v_valid_upper_bound_theta_; /* final result of valid_upper_bound_ joint angle */
-    std::vector<double> v_valid_upper_bound_delta_; /* the vector of tilt angles of between each link and related side */
+    std::vector<double> v_valid_upper_bound_phi_; /* the vector of tilt angles of between each link and related side */
 
     std::vector<double> v_best_contact_d_; /* the vector of position of contact point at each side from the previous vertex */
     std::vector<double> v_valid_lower_bound_contact_d_; /* the vector of contact dist from vertex to next vertex */

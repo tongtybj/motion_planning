@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
+import math
 from std_msgs.msg import String
 from geometry_msgs.msg import PolygonStamped, Point32, Inertia, Vector3
 from visualization_msgs.msg import Marker
@@ -17,13 +18,6 @@ if __name__ == '__main__':
         sys.exit(1)
     else:
         object_type = rospy.get_param('~object_type')
-
-    if not rospy.has_param('~object_mass'):
-        rospy.logfatal("no config about object_mass")
-        sys.exit(1)
-    else:
-        inertia.m = rospy.get_param('~object_mass')
-        ## TODO: inertia tensor
 
     if object_type == ObjectConfigureRequest.CONVEX_POLYGONAL_COLUMN:
         ## param: convex_polygonal_column
@@ -58,6 +52,22 @@ if __name__ == '__main__':
             object_radius.x = rospy.get_param('~radius')
             vertices.append(object_radius)
 
+    if not rospy.has_param('~object_mass'):
+        rospy.logfatal("no config about object_mass")
+        sys.exit(1)
+    else:
+        inertia.m = rospy.get_param('~object_mass')
+        object_height = rospy.get_param('~object_height', 0.3)
+        if object_type == ObjectConfigureRequest.CONVEX_POLYGONAL_COLUMN:
+            # approximated
+            side_len_square = math.pow(vertices[1].y - vertices[0].y, 2) + math.pow(vertices[1].x - vertices[0].x, 2)
+            inertia.ixx = (side_len_square / 4 + object_height * object_height / 4) / 3 * inertia.m
+            inertia.iyy = inertia.ixx
+            inertia.izz = side_len_square / 6 * inertia.m
+        if object_type == ObjectConfigureRequest.CYLINDER:
+            inertia.ixx = (object_radius.x * object_radius.x /16 + object_height * object_height / 12) * inertia.m
+            inertia.iyy = inertia.ixx
+            inertia.izz = object_radius.x * object_radius.x /8 * inertia.m
     # client
     only_pub = rospy.get_param('~only_pub')
     if not only_pub:

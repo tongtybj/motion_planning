@@ -98,7 +98,7 @@ namespace grasp_form_search
     return true;
   }
 
-  bool GraspFormSearch::convexPolygonNeighbourContacts(double curr_contact_d, double curr_delta, double curr_psi, double curr_side_len, double next_side_len,  double& theta /* joint_angle */, double& next_delta, Vector3d& joint_p, double& next_contact_d)
+  bool GraspFormSearch::convexPolygonNeighbourContacts(double curr_contact_d, double curr_phi, double curr_psi, double curr_side_len, double next_side_len,  double& theta /* joint_angle */, double& next_phi, Vector3d& joint_p, double& next_contact_d)
   {
     /* note: */
     /* the origin is the current vertex,  different with 2017 IJRR/ICRA (contact p is origin) */
@@ -111,30 +111,30 @@ namespace grasp_form_search
         return false;
       }
 
-    auto jointColiisionCheck = [this](double curr_contact_d, double curr_delta, double curr_side_len) -> bool {
+    auto jointColiisionCheck = [this](double curr_contact_d, double curr_phi, double curr_side_len) -> bool {
       /* check the current joint is out of the Convex polygon  */
-      if(curr_delta > 0 &&
-         -duct_radius_ + link_length_ / 2 * sin(curr_delta) > 0 &&
-         (duct_radius_ / (curr_side_len - curr_contact_d )) < tan(curr_delta))
+      if(curr_phi > 0 &&
+         -duct_radius_ + link_length_ / 2 * sin(curr_phi) > 0 &&
+         (duct_radius_ / (curr_side_len - curr_contact_d )) < tan(curr_phi))
         return false;
 
-      if(curr_delta < 0 &&
-         -duct_radius_ + link_length_ / 2 * sin(-curr_delta) > 0 &&
-         (duct_radius_ / curr_contact_d) < tan(-curr_delta))
+      if(curr_phi < 0 &&
+         -duct_radius_ + link_length_ / 2 * sin(-curr_phi) > 0 &&
+         (duct_radius_ / curr_contact_d) < tan(-curr_phi))
         return false;
 
       return true;
     };
 
-    if(!jointColiisionCheck(curr_contact_d, curr_delta, curr_side_len))
+    if(!jointColiisionCheck(curr_contact_d, curr_phi, curr_side_len))
       {
-        if(kinematics_verbose_) ROS_WARN("[convexPolygonNeighbourContacts]: the current joint is inside the convex polygon, delta  and contact_d, side length  is [%f, %f, %f] ", curr_delta,  curr_contact_d, curr_side_len);
+        if(kinematics_verbose_) ROS_WARN("[convexPolygonNeighbourContacts]: the current joint is inside the convex polygon, phi  and contact_d, side length  is [%f, %f, %f] ", curr_phi,  curr_contact_d, curr_side_len);
         return false;
       }
 
 
     /* joint position based on current side */
-    joint_p = Vector3d(curr_contact_d, -duct_radius_, 0) +  AngleAxisd(curr_delta, Vector3d::UnitZ()) * Vector3d(link_length_ / 2, 0, 0) ; // P_c_i -> P_l_i -> P_j_i
+    joint_p = Vector3d(curr_contact_d, -duct_radius_, 0) +  AngleAxisd(curr_phi, Vector3d::UnitZ()) * Vector3d(link_length_ / 2, 0, 0) ; // P_c_i -> P_l_i -> P_j_i
 
 
     double sin_psi = sin(curr_psi);
@@ -148,18 +148,18 @@ namespace grasp_form_search
         return false;
       }
 
-    next_delta = asin(gamma);
-    theta = next_delta - curr_delta + curr_psi;
+    next_phi = asin(gamma);
+    theta = next_phi - curr_phi + curr_psi;
 
     /* check the validation of joint angle */
-    if(theta <= 0 || fabs(theta) >= joint_angle_limit_ || theta + curr_delta < 1.0e-6)
+    if(theta <= 0 || fabs(theta) >= joint_angle_limit_ || theta + curr_phi < 1.0e-6)
       {//case1: negative angle means no envelop, case2: angle limitation, case3: no contact with real side
         if(kinematics_verbose_)
           ROS_WARN("[convexPolygonNeighbourContacts] joint calc: joint angle is not valid, angle is %f", theta);
         return false;
       }
 
-    Vector3d next_contact_p = joint_p + AngleAxisd(theta + curr_delta, Vector3d::UnitZ()) * Vector3d(link_length_ / 2, 0, 0) + AngleAxisd(curr_psi + M_PI/2, Vector3d::UnitZ()) * Vector3d(duct_radius_, 0, 0);
+    Vector3d next_contact_p = joint_p + AngleAxisd(theta + curr_phi, Vector3d::UnitZ()) * Vector3d(link_length_ / 2, 0, 0) + AngleAxisd(curr_psi + M_PI/2, Vector3d::UnitZ()) * Vector3d(duct_radius_, 0, 0);
 
     /* check the y of the contact point whether is possitive */
     if(next_contact_p(1) < 1e-6)
@@ -186,32 +186,30 @@ namespace grasp_form_search
         return false;
       }
 
-    if(!jointColiisionCheck(next_contact_d, next_delta, next_side_len))
+    if(!jointColiisionCheck(next_contact_d, next_phi, next_side_len))
       {
-        if(kinematics_verbose_) ROS_WARN("[convexPolygonNeighbourContacts]: the nextent joint is inside the convex polygon, delta  and contact_d, side len is [%f, %f, %f] ", next_delta,  next_contact_d, next_side_len);
+        if(kinematics_verbose_) ROS_WARN("[convexPolygonNeighbourContacts]: the nextent joint is inside the convex polygon, phi  and contact_d, side len is [%f, %f, %f] ", next_phi,  next_contact_d, next_side_len);
         return false;
       }
 
     return true;
   }
 
-  bool GraspFormSearch::envelopingCalc(double first_contact_d, double first_delta, std::vector<double>& v_theta, std::vector<double>& v_delta, std::vector<double>& v_contact_d, std::vector<Vector3d>& v_contact_p, std::vector<Quaterniond>& v_contact_rot, std::vector<Vector3d>& v_joint_p, int start_side /* convex */)
+  bool GraspFormSearch::envelopingCalc(double first_contact_d, double first_phi, std::vector<double>& v_theta, std::vector<double>& v_phi, std::vector<double>& v_contact_d, std::vector<Vector3d>& v_contact_p, std::vector<Quaterniond>& v_contact_rot, std::vector<Vector3d>& v_joint_p, int start_link, int start_side /* convex */)
   {
     /* note: */
     /* 1. the first element of v_joint is the root of uav */
     /* 2. contact_d is different with paper(2017 ICRA, IJRR), contact_d + d_paper = side_length */
 
     v_theta.clear();
-    v_delta.clear();
+    v_phi.clear();
     v_contact_d.clear();
     v_contact_p.clear();
     v_joint_p.clear();
     v_contact_rot.clear();
-    v_delta.push_back(first_delta);
 
     Vector3d joint_p; /* local */
     Vector3d next_contact_p;
-    //double abs_theta = first_delta;
 
     if(object_type_ == aerial_transportation::ObjectConfigure::Request::UNKNOWN)
       {
@@ -223,30 +221,44 @@ namespace grasp_form_search
       {
       case aerial_transportation::ObjectConfigure::Request::CONVEX_POLYGONAL_COLUMN:
         {
-          double curr_delta = first_delta;
+          assert(start_link < contact_num_);
+
+          double curr_phi = first_phi;
           double curr_contact_d = first_contact_d;
-          v_contact_d.push_back(curr_contact_d);
 
+          v_theta.resize(contact_num_ - 1);
+          v_phi.resize(contact_num_);
+          v_contact_d.resize(contact_num_);
+          v_contact_p.resize(contact_num_);
+          v_joint_p.resize(contact_num_);
+          v_contact_rot.resize(contact_num_);
 
-          for(int i = 0; i < contact_num_; i ++)
+          // v_contact_d.push_back(curr_contact_d);
+          // v_phi.push_back(curr_phi_d);
+          // change to two seperated process, center to end, and center to begin
+
+          /* form start_link */
+          for(int i = start_link; i < contact_num_; i ++)
             {
               int index = (i + start_side) % object_.size();
-              v_contact_p.push_back(object_[index]->vertex_p_ +
-                                    object_[index]->contact_rot_ * Vector3d(curr_contact_d, 0, 0));
 
-              v_contact_rot.push_back(object_[index]->contact_rot_);
-              v_joint_p.push_back(v_contact_p[i] +
-                                  object_[index]->contact_rot_ * (Vector3d(0, -duct_radius_, 0) + AngleAxisd(curr_delta, Vector3d::UnitZ()) * Vector3d(-link_length_ / 2, 0, 0)));
+              v_phi.at(i) = curr_phi;
+              v_contact_d.at(i) = curr_contact_d;
+
+              v_contact_p.at(i) = (object_.at(index)->vertex_p_ +
+                                   object_.at(index)->contact_rot_ * Vector3d(curr_contact_d, 0, 0));
+              v_contact_rot.at(i) = object_.at(index)->contact_rot_;
+              v_joint_p.at(i) = v_contact_p.at(i) + object_.at(index)->contact_rot_ * (Vector3d(0, -duct_radius_, 0) + AngleAxisd(curr_phi, Vector3d::UnitZ()) * Vector3d(-link_length_ / 2, 0, 0));
 
               if(kinematics_verbose_)
-                ROS_INFO("[envelopingCalc]: convex, joint%d p: [%f, %f], contact%d p: [%f, %f]", i, v_joint_p[i](0), v_joint_p[i](1), i + 1, v_contact_p[i](0), v_contact_p[i](1));
+                ROS_INFO("[envelopingCalc]: convex, joint%d p: [%f, %f], contact%d p: [%f, %f], phi: %f, contact_d: %f, rot: [%f, %f, %f, %f]", i, v_joint_p.at(i)(0), v_joint_p.at(i)(1), i + 1, v_contact_p.at(i)(0), v_contact_p.at(i)(1), curr_phi, curr_contact_d, object_.at(index)->contact_rot_.x(), object_.at(index)->contact_rot_.y(), object_.at(index)->contact_rot_.z(), object_.at(index)->contact_rot_.w());
 
               if(i == contact_num_ -1) break;
               double theta;
-              double next_delta ;
+              double next_phi ;
               double next_contact_d;
 
-              if(!convexPolygonNeighbourContacts(curr_contact_d, curr_delta, object_[(index + 1) % object_.size()]->psi_, object_[index]->len_, object_[(index + 1) % object_.size()]->len_, theta , next_delta, joint_p, next_contact_d))
+              if(!convexPolygonNeighbourContacts(curr_contact_d, curr_phi, object_.at((index + 1) % object_.size())->psi_, object_.at(index)->len_, object_.at((index + 1) % object_.size())->len_, theta , next_phi, joint_p, next_contact_d))
                 {
                   if(kinematics_verbose_)
                     ROS_WARN("[envelopingCalc]: fail to calculate the enveloping for convex at joint%d", i + 1);
@@ -256,51 +268,88 @@ namespace grasp_form_search
               if(kinematics_verbose_)
                 ROS_INFO("[envelopingCalc]: joint%d, angle: %f", i + 1,theta);
 
-              curr_delta = next_delta;
+              curr_phi = next_phi;
               curr_contact_d = next_contact_d;
-              v_theta.push_back(theta);
-              v_delta.push_back(next_delta);
-              v_contact_d.push_back(next_contact_d);
+              v_theta.at(i) = theta;
+            }
+
+          curr_phi = first_phi;
+          curr_contact_d = first_contact_d;
+
+          for(int i = start_link; i > 0; i--)
+            {
+              int index = (i + start_side) % object_.size();
+              assert(index > 0);
+
+              double theta;
+              double next_reverse_phi ;
+              double next_contact_opposite_d;
+
+              if(!convexPolygonNeighbourContacts(object_.at(index)->len_ - curr_contact_d, -curr_phi, object_.at(index)->psi_, object_.at(index)->len_, object_.at((index - 1) % object_.size())->len_, theta , next_reverse_phi, joint_p, next_contact_opposite_d))
+                {
+                  if(kinematics_verbose_)
+                    ROS_WARN("[envelopingCalc]: fail to calculate the enveloping for convex at joint%d", i + 1);
+                  return false;
+                }
+
+              if(kinematics_verbose_)
+                ROS_INFO("[envelopingCalc]: joint%d, angle: %f", i,theta);
+
+              curr_phi = -next_reverse_phi;
+              curr_contact_d = object_.at((index - 1) % object_.size())->len_ - next_contact_opposite_d;
+              v_theta.at(i-1) = theta;
+              v_phi.at(i-1) = curr_phi;
+              v_contact_d.at(i-1) = curr_contact_d;
+
+              v_contact_p.at(i-1) = object_.at(index-1)->vertex_p_ + object_.at(index-1)->contact_rot_ * Vector3d(curr_contact_d, 0, 0);
+
+              v_contact_rot.at(i-1) = object_.at(index-1)->contact_rot_;
+              v_joint_p.at(i-1) = v_contact_p.at(i-1) +
+                object_.at(index-1)->contact_rot_ * (Vector3d(0, -duct_radius_, 0) + AngleAxisd(curr_phi, Vector3d::UnitZ()) * Vector3d(-link_length_ / 2, 0, 0));
+
+              if(kinematics_verbose_)
+                ROS_INFO("[envelopingCalc]: convex, joint%d p: [%f, %f], contact%d p: [%f, %f]", i-1, v_joint_p.at(i-1)(0), v_joint_p.at(i-1)(1), i, v_contact_p.at(i-1)(0), v_contact_p.at(i-1)(1));
 
             }
           break;
         }
       case aerial_transportation::ObjectConfigure::Request::CYLINDER:
         {
+          v_phi.push_back(first_phi);
 
           double abs_psi = 0;
 
           /* distance from center to each joint point */
-          double d_1 = sqrt(link_length_ * link_length_ / 4 + (duct_radius_ + object_radius_) * (duct_radius_ + object_radius_) - link_length_ * (duct_radius_ + object_radius_) * cos(M_PI / 2 + first_delta));
-          double d_2 = sqrt(link_length_ * link_length_ / 4 + (duct_radius_ + object_radius_) * (duct_radius_ + object_radius_) - link_length_ * (duct_radius_ + object_radius_) * cos(M_PI / 2 - first_delta));
-          double theta_1 = M_PI - 2 * asin((duct_radius_ + object_radius_) / d_1 * sin(M_PI / 2 + first_delta));
-          double theta_2 = M_PI - 2 * asin((duct_radius_ + object_radius_) / d_2 * sin(M_PI / 2 - first_delta));
-          double psi_1 = 2 * asin(link_length_ / 2 / d_1 * sin(M_PI / 2 + first_delta));
-          double psi_2 = 2 * asin(link_length_ / 2 / d_2 * sin(M_PI / 2 - first_delta));
-          double delta_1 = first_delta;
-          double delta_2 = -first_delta;
+          double d_1 = sqrt(link_length_ * link_length_ / 4 + (duct_radius_ + object_radius_) * (duct_radius_ + object_radius_) - link_length_ * (duct_radius_ + object_radius_) * cos(M_PI / 2 + first_phi));
+          double d_2 = sqrt(link_length_ * link_length_ / 4 + (duct_radius_ + object_radius_) * (duct_radius_ + object_radius_) - link_length_ * (duct_radius_ + object_radius_) * cos(M_PI / 2 - first_phi));
+          double theta_1 = M_PI - 2 * asin((duct_radius_ + object_radius_) / d_1 * sin(M_PI / 2 + first_phi));
+          double theta_2 = M_PI - 2 * asin((duct_radius_ + object_radius_) / d_2 * sin(M_PI / 2 - first_phi));
+          double psi_1 = 2 * asin(link_length_ / 2 / d_1 * sin(M_PI / 2 + first_phi));
+          double psi_2 = 2 * asin(link_length_ / 2 / d_2 * sin(M_PI / 2 - first_phi));
+          double phi_1 = first_phi;
+          double phi_2 = -first_phi;
           if(kinematics_verbose_)
-            ROS_INFO("[envelopingCalc]: cylinder, d1: %f, d2: %f, tehta1: %f, theta2: %f, psi1: %f, psi2: %f, delta1: %f, delta2: %f", d_1, d_2, theta_1, theta_2, psi_1, psi_2, delta_1, delta_2);
+            ROS_INFO("[envelopingCalc]: cylinder, d1: %f, d2: %f, tehta1: %f, theta2: %f, psi1: %f, psi2: %f, phi1: %f, phi2: %f", d_1, d_2, theta_1, theta_2, psi_1, psi_2, phi_1, phi_2);
 
           for(int i = 0; i < contact_num_; i ++)
             {
               double theta = (i % 2 == 1)? theta_1: theta_2;
               double psi = (i % 2 == 1)? psi_1: psi_2;
-              double delta = (i % 2 == 1)? delta_1: delta_2;
+              double phi = (i % 2 == 1)? phi_1: phi_2;
 
               v_contact_rot.push_back(Quaterniond(AngleAxisd(abs_psi, Vector3d::UnitZ())));
-              v_contact_p.push_back(v_contact_rot[i] * Vector3d(0, -object_radius_, 0));
-              v_joint_p.push_back(v_contact_rot[i] * (Vector3d(0, -object_radius_ - duct_radius_, 0) + AngleAxisd(v_delta[i], Vector3d::UnitZ()) * Vector3d(-link_length_ / 2, 0, 0)));
+              v_contact_p.push_back(v_contact_rot.at(i) * Vector3d(0, -object_radius_, 0));
+              v_joint_p.push_back(v_contact_rot.at(i) * (Vector3d(0, -object_radius_ - duct_radius_, 0) + AngleAxisd(v_phi.at(i), Vector3d::UnitZ()) * Vector3d(-link_length_ / 2, 0, 0)));
 
               if(i < contact_num_ -1)
                 {
                   v_theta.push_back(theta);
-                  v_delta.push_back(delta); // the first delta is add in the start part of this function
+                  v_phi.push_back(phi); // the first phi is add in the start part of this function
                 }
               abs_psi += psi;
 
               if(kinematics_verbose_)
-                ROS_INFO("[envelopingCalc]: cylinder, joint%d p: [%f, %f], contact%d p: [%f, %f], ", i , v_joint_p[i](0), v_joint_p[i](1), i + 1, v_contact_p[i](0), v_contact_p[i](1));
+                ROS_INFO("[envelopingCalc]: cylinder, joint%d p: [%f, %f], contact%d p: [%f, %f], ", i , v_joint_p.at(i)(0), v_joint_p.at(i)(1), i + 1, v_contact_p.at(i)(0), v_contact_p.at(i)(1));
 
               /* check the validation of joint angle */
               if(theta <= 0 || fabs(theta) >= joint_angle_limit_)

@@ -76,11 +76,15 @@ target_link_libraries(grasp_form_search ${catkin_LIBRARIES} ${Boost_LIBRARIES} q
 add_executable(grasp_form_search_node src/grasp_form_searching/grasp_form_search_node.cpp)
 target_link_libraries (grasp_form_search_node ${catkin_LIBRARIES}  ${Boost_LIBRARIES} grasp_form_search)
 
+# motion planner (plugin)
+add_library(grasp_motion_planning_pluginlib src/grasp_motion/whole_body.cpp)
+target_link_libraries(grasp_motion_planning_pluginlib ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
 # library of aerial transportation
-#add_executable(aerial_transportation_node src/aerial_transportation_node.cpp)
-#target_link_libraries (aerial_transportation_node ${catkin_LIBRARIES}  ${Boost_LIBRARIES})
-#add_library(aerial_transportation_pluginlib src/grasp_control/base.cpp src/grasp_control/eletromagnet.cpp src/grasp_control/hydrus.cpp)
-#target_link_libraries(aerial_transportation_pluginlib ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+add_library(aerial_transportation src/aerial_transportation)
+target_link_libraries(aerial_transportation ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+add_executable(aerial_transportation_node src/aerial_transportation_node.cpp)
+target_link_libraries (aerial_transportation_node ${catkin_LIBRARIES}  ${Boost_LIBRARIES} aerial_transportation)
 
 
 #add_executable(object_visualization src/object_visualization.cpp)

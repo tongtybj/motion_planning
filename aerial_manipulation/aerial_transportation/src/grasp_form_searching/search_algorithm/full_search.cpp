@@ -48,11 +48,11 @@ namespace grasp_form_search
     std::cout << "[search algorithm] one_side_flag: " << one_side_flag_ << std::endl;
     nhp_.param("res_d", res_d_, 0.001); //[m]
     std::cout << "[search algorithm] res_d: " << res_d_ << std::endl;
-    nhp_.param("res_delta", res_delta_, 0.01); //[rad]
-    std::cout << "[search algorithm] res_delta: " << res_delta_ << std::endl;
+    nhp_.param("res_phi", res_phi_, 0.01); //[rad]
+    std::cout << "[search algorithm] res_phi: " << res_phi_ << std::endl;
 
-    nhp_.param("delta_valid_range", delta_valid_range_, 0.1); //[rad]
-    std::cout << "[search algorithm] delta_valid_range: " << delta_valid_range_ << std::endl;
+    nhp_.param("phi_valid_range", phi_valid_range_, 0.1); //[rad]
+    std::cout << "[search algorithm] phi_valid_range: " << phi_valid_range_ << std::endl;
     nhp_.param("d_valid_range", d_valid_range_, 0.03); //[mm]
     std::cout << "[search algorithm] d_valid_range: " << d_valid_range_ << std::endl;
 
@@ -75,7 +75,7 @@ namespace grasp_form_search
     int contact_num = form_searcher_->getContactNum();
 
     std::vector<double> v_theta;
-    std::vector<double> v_delta;
+    std::vector<double> v_phi;
     std::vector<double> v_contact_d;
     std::vector<Vector3d> v_contact_p;
     std::vector<Quaterniond> v_contact_rot;
@@ -86,7 +86,7 @@ namespace grasp_form_search
     VectorXd v_tau = VectorXd::Zero(contact_num -1 );
 
     std::vector<double> v_best_theta;
-    std::vector<double> v_best_delta;
+    std::vector<double> v_best_phi;
     std::vector<double> v_best_contact_d;
     std::vector<Vector3d> v_best_contact_p;
     std::vector<Quaterniond> v_best_contact_rot;
@@ -98,8 +98,8 @@ namespace grasp_form_search
     /* valid range */
     std::vector<double> v_valid_lower_bound_theta;
     std::vector<double> v_valid_upper_bound_theta;
-    std::vector<double> v_valid_lower_bound_delta;
-    std::vector<double> v_valid_upper_bound_delta;
+    std::vector<double> v_valid_lower_bound_phi;
+    std::vector<double> v_valid_upper_bound_phi;
     std::vector<double> v_valid_lower_bound_contact_d;
     std::vector<double> v_valid_upper_bound_contact_d;
 
@@ -122,27 +122,27 @@ namespace grasp_form_search
           /* full search for each side to serve as the first side*/
           for(int i = 0; i < form_searcher_->getSideNum(); i++)
             {
-              double side_length = form_searcher_->getObjectInfo()[i]->len_;
-              // double l_delta = - atan2(duct_radius, d);
-              // double u_delta = atan2(duct_radius, v_side_length_[0] -d );
-              double l_delta = - M_PI / 2;
-              double u_delta = M_PI / 2;
+              double side_length = form_searcher_->getObjectInfo().at(i)->len_;
+              // double l_phi = - atan2(duct_radius, d);
+              // double u_phi = atan2(duct_radius, v_side_length_[0] -d );
+              double l_phi = - M_PI / 2;
+              double u_phi = M_PI / 2;
 
-              search_map_.push_back(MatrixXd::Constant(side_length / res_d_, (u_delta - l_delta) / res_delta_, 1e6));
+              search_map_.push_back(MatrixXd::Constant(side_length / res_d_, (u_phi - l_phi) / res_phi_, 1e6));
 
               int row;
               int col;
               double d;
-              double delta;
+              double phi;
               for(d = 0, row = 0; d < side_length; d += res_d_, row++)
                 {
-                  for(delta = l_delta, col = 0; delta < u_delta; delta += res_delta_, col++)
+                  for(phi = l_phi, col = 0; phi < u_phi; phi += res_phi_, col++)
                     {
 
                       bool kinematics_validity = true;
                       bool statics_validity = true;
                       /* 1. calculate the joint angles */
-                      if(!form_searcher_->envelopingCalc(d, delta, v_theta, v_delta, v_contact_d, v_contact_p, v_contact_rot, v_joint_p, i))
+                      if(!form_searcher_->envelopingCalc(d, phi, v_theta, v_phi, v_contact_d, v_contact_p, v_contact_rot, v_joint_p, form_searcher_->getBaselink(), i))
                         kinematics_validity = false;
                       /* 2. calculate the joint angles */
                       if(kinematics_validity)
@@ -153,10 +153,10 @@ namespace grasp_form_search
 
                           tf::Transform tf_object_origin_to_uav_root;
                           tf::Vector3 uav_root_origin;
-                          tf::vectorEigenToTF(v_joint_p[0], uav_root_origin);
+                          tf::vectorEigenToTF(v_joint_p.at(0), uav_root_origin);
                           tf_object_origin_to_uav_root.setOrigin(uav_root_origin);
                           tf::Quaternion uav_root_q;
-                          tf::quaternionEigenToTF(form_searcher_->getObjectInfo()[i]->contact_rot_ * AngleAxisd(delta, Vector3d::UnitZ()), uav_root_q);
+                          tf::quaternionEigenToTF(form_searcher_->getObjectInfo().at(i)->contact_rot_ * AngleAxisd(v_phi.at(0), Vector3d::UnitZ()), uav_root_q);
                           tf_object_origin_to_uav_root.setRotation(uav_root_q);
                           if(!form_searcher_->hoveringStatics(v_theta, tf_object_origin_to_uav_root.inverse(), v_hover_thrust))
                             statics_validity = false;
@@ -166,10 +166,10 @@ namespace grasp_form_search
 
                       /* 2.5 show the result of the validity */
                       if(kinematics_validity && !statics_validity)
-                        ROS_ERROR("[full search]: d:%f, delta:%f, l_delta:%f, u_delta:%f, statics invalid", d, delta, l_delta, u_delta);
+                        ROS_ERROR("[full search]: d:%f, phi:%f, l_phi:%f, u_phi:%f, statics invalid", d, phi, l_phi, u_phi);
                       if(kinematics_validity && statics_validity)
                         {
-                          ROS_INFO("[full search]: d:%f, delta:%f, l_delta:%f, u_delta:%f, valid state", d, delta, l_delta, u_delta);
+                          ROS_INFO("[full search]: d:%f, phi:%f, l_phi:%f, u_phi:%f, valid state", d, phi, l_phi, u_phi);
                         }
 
                       /* 3. update  */
@@ -177,14 +177,14 @@ namespace grasp_form_search
                         {
                           /* weighted sum */
 #if 1
-                          search_map_[i](row, col) = thrust_weight_ * v_hover_thrust.norm() + torque_weight_ * v_tau.maxCoeff();
+                          search_map_.at(i)(row, col) = thrust_weight_ * v_hover_thrust.norm() + torque_weight_ * v_tau.maxCoeff();
 #else
                           double diff_min_ave_thrust = fabs(v_hover_thrust.minCoeff() - average_thrust);
                           double diff_max_ave_thrust = fabs(v_hover_thrust.maxCoeff() - average_thrust);
                           if(diff_max_ave_thrust > diff_min_ave_thrust)
-                            search_map_[i](row, col) = thrust_weight_ * diff_max_ave_thrust + torque_weight_ * v_tau.maxCoeff();
+                            search_map_.at(i)(row, col) = thrust_weight_ * diff_max_ave_thrust + torque_weight_ * v_tau.maxCoeff();
                           else
-                            search_map_[i](row, col) = thrust_weight_ * diff_min_ave_thrust + torque_weight_ * v_tau.maxCoeff();
+                            search_map_.at(i)(row, col) = thrust_weight_ * diff_min_ave_thrust + torque_weight_ * v_tau.maxCoeff();
 
 #endif
                         }
@@ -193,7 +193,7 @@ namespace grasp_form_search
                         {
                           if(kinematics_validity)
                             {
-                              log_ofs << i + 1 << "\t" << d  << "\t" << delta << "\t" << search_map_[i](row, col);
+                              log_ofs << i + 1 << "\t" << d  << "\t" << phi << "\t" << search_map_.at(i)(row, col);
                               if(statics_validity)
                                 log_ofs << "\t" << v_tau.maxCoeff() << "\t"  << v_hover_thrust.maxCoeff() << "\t"  << v_hover_thrust.minCoeff()  << std::endl;
                               else
@@ -203,18 +203,18 @@ namespace grasp_form_search
                     }
                 }
 
-              for(row = 0; row < search_map_[i].rows(); row++)
+              for(row = 0; row < search_map_.at(i).rows(); row++)
                 {
-                  for(col = 0; col < search_map_[i].cols(); col++)
+                  for(col = 0; col < search_map_.at(i).cols(); col++)
                     {
                       int d_valid_range  = d_valid_range_ / res_d_;
-                      int delta_valid_range  = delta_valid_range_ / res_delta_;
+                      int phi_valid_range  = phi_valid_range_ / res_phi_;
 
-                      if(row + d_valid_range >= search_map_[i].rows() ||
-                         col + delta_valid_range > search_map_[i].cols())
+                      if(row + d_valid_range >= search_map_.at(i).rows() ||
+                         col + phi_valid_range > search_map_.at(i).cols())
                         continue;
 
-                      double cost_sum = search_map_[i].block(row, col, d_valid_range, delta_valid_range).sum();
+                      double cost_sum = search_map_.at(i).block(row, col, d_valid_range, phi_valid_range).sum();
                       if(min_cost_sum > cost_sum)
                         {
                           min_cost_sum = cost_sum;
@@ -222,9 +222,9 @@ namespace grasp_form_search
                           best_start_side = i;
 
                           double center_d = row * res_d_ + d_valid_range_ / 2;
-                          double center_delta = col * res_delta_ + l_delta + delta_valid_range_ / 2;
+                          double center_phi = col * res_phi_ + l_phi + phi_valid_range_ / 2;
 
-                          if(!form_searcher_->envelopingCalc(center_d, center_delta, v_best_theta, v_best_delta, v_best_contact_d, v_best_contact_p, v_best_contact_rot, v_best_joint_p, i))
+                          if(!form_searcher_->envelopingCalc(center_d, center_phi, v_best_theta, v_best_phi, v_best_contact_d, v_best_contact_p, v_best_contact_rot, v_best_joint_p, form_searcher_->getBaselink(), i))
                             ROS_FATAL("[full search]: can not get the valid kinematics from the best confiugration");
                           /* check force-closure */
                           if(!form_searcher_->graspForceClosure(v_best_contact_p, v_best_contact_rot, v_best_joint_p, v_best_tau, v_best_min_f_fc))
@@ -232,26 +232,26 @@ namespace grasp_form_search
                           /* check hovering  */
                           tf::Transform tf_object_origin_to_uav_root;
                           tf::Vector3 uav_root_origin;
-                          tf::vectorEigenToTF(v_best_joint_p[0], uav_root_origin);
+                          tf::vectorEigenToTF(v_best_joint_p.at(0), uav_root_origin);
                           tf_object_origin_to_uav_root.setOrigin(uav_root_origin);
                           tf::Quaternion uav_root_q;
-                          tf::quaternionEigenToTF(form_searcher_->getObjectInfo()[i]->contact_rot_ * AngleAxisd(v_best_delta[9], Vector3d::UnitZ()), uav_root_q);
+                          tf::quaternionEigenToTF(form_searcher_->getObjectInfo().at(i)->contact_rot_ * AngleAxisd(v_best_phi.at(0), Vector3d::UnitZ()), uav_root_q);
                           tf_object_origin_to_uav_root.setRotation(uav_root_q);
                           if(!form_searcher_->hoveringStatics(v_best_theta, tf_object_origin_to_uav_root.inverse(), v_best_hover_thrust))
                             ROS_FATAL("[full search]: can not get the valid hovering state from the best confiugration");
 
-                            /* set the valid range of the contact_d and delta */
-                          double valid_lower_d = row * res_d_ + d_valid_range_;
-                          double valid_lower_delta = col * res_delta_ + l_delta + delta_valid_range_;
+                            /* set the valid range of the contact_d and phi */
+                          double valid_upper_d = row * res_d_ + d_valid_range_;
+                          double valid_upper_phi = col * res_phi_ + l_phi + phi_valid_range_;
 
-                          if(!form_searcher_->envelopingCalc(valid_lower_d, valid_lower_delta, v_valid_lower_bound_theta, v_valid_lower_bound_delta, v_valid_lower_bound_contact_d, v_contact_p, v_contact_rot, v_joint_p, i))
-                            ROS_FATAL("[full search]: can not get the valid kinematics from the valid lower bound configuration");
-
-                          double valid_upper_d = row * res_d_;
-                          double valid_upper_delta = col * res_delta_ + l_delta;
-
-                          if(!form_searcher_->envelopingCalc(valid_upper_d, valid_upper_delta, v_valid_upper_bound_theta, v_valid_upper_bound_delta, v_valid_upper_bound_contact_d, v_contact_p, v_contact_rot, v_joint_p, i))
+                          if(!form_searcher_->envelopingCalc(valid_upper_d, valid_upper_phi, v_valid_upper_bound_theta, v_valid_upper_bound_phi, v_valid_upper_bound_contact_d, v_contact_p, v_contact_rot, v_joint_p, form_searcher_->getBaselink(), i))
                             ROS_FATAL("[full search]: can not get the valid kinematics from the valid upper bound configuration");
+
+                          double valid_lower_d = row * res_d_;
+                          double valid_lower_phi = col * res_phi_ + l_phi;
+
+                          if(!form_searcher_->envelopingCalc(valid_lower_d, valid_lower_phi, v_valid_lower_bound_theta, v_valid_lower_bound_phi, v_valid_lower_bound_contact_d, v_contact_p, v_contact_rot, v_joint_p, form_searcher_->getBaselink(), i))
+                            ROS_FATAL("[full search]: can not get the valid kinematics from the valid lower bound configuration");
                         }
                     }
                 }
@@ -260,26 +260,26 @@ namespace grasp_form_search
 
           /* set the final result */
           form_searcher_->setBestStartSide(best_start_side);
-          form_searcher_->setBestForceClosureResult(v_best_theta, v_valid_lower_bound_theta, v_valid_upper_bound_theta, v_best_delta, v_valid_lower_bound_delta, v_valid_upper_bound_delta, v_best_contact_p, v_best_contact_rot, v_best_joint_p, v_best_min_f_fc, v_best_tau, v_hover_thrust);
+          form_searcher_->setBestForceClosureResult(v_best_theta, v_valid_lower_bound_theta, v_valid_upper_bound_theta, v_best_phi, v_valid_lower_bound_phi, v_valid_upper_bound_phi, v_best_contact_p, v_best_contact_rot, v_best_joint_p, v_best_min_f_fc, v_best_tau, v_hover_thrust);
           form_searcher_->setBestContactDVector(v_best_contact_d, v_valid_lower_bound_contact_d, v_valid_upper_bound_contact_d);
           break;
         }
       case aerial_transportation::ObjectConfigure::Request::CYLINDER:
         {
-          double u_delta = M_PI / 2  - acos((link_length / 2) / (duct_radius + object_radius));
-          double l_delta = - u_delta;
+          double u_phi = M_PI / 2  - acos((link_length / 2) / (duct_radius + object_radius));
+          double l_phi = - u_phi;
 
-          search_map_.push_back(MatrixXd::Constant( (u_delta - l_delta) / res_delta_, 1, 1e6));
+          search_map_.push_back(MatrixXd::Constant( (u_phi - l_phi) / res_phi_, 1, 1e6));
 
           int index;
-          double delta;
-          for(delta = l_delta, index = 0 ; delta <= u_delta; delta += res_delta_, index++)
+          double phi;
+          for(phi = l_phi, index = 0 ; phi <= u_phi; phi += res_phi_, index++)
             {
               bool kinematics_validity = true;
               bool statics_validity = true;
 
               /* 1. calculate the joint angles */
-              if(!form_searcher_->envelopingCalc(0, delta, v_theta, v_delta, v_contact_d, v_contact_p, v_contact_rot, v_joint_p, 0))
+              if(!form_searcher_->envelopingCalc(0, phi, v_theta, v_phi, v_contact_d, v_contact_p, v_contact_rot, v_joint_p, 0, 0))
                 kinematics_validity = false;
 
               /* 2. calculate the joint angles */
@@ -290,10 +290,10 @@ namespace grasp_form_search
 
                   tf::Transform tf_object_origin_to_uav_root;
                   tf::Vector3 uav_root_origin;
-                  tf::vectorEigenToTF(v_joint_p[0], uav_root_origin);
+                  tf::vectorEigenToTF(v_joint_p.at(0), uav_root_origin);
                   tf_object_origin_to_uav_root.setOrigin(uav_root_origin);
                   tf::Quaternion uav_root_q;
-                  tf::quaternionEigenToTF(Quaterniond(AngleAxisd(delta, Vector3d::UnitZ())), uav_root_q);
+                  tf::quaternionEigenToTF(Quaterniond(AngleAxisd(v_phi.at(0), Vector3d::UnitZ())), uav_root_q);
                   tf_object_origin_to_uav_root.setRotation(uav_root_q);
                   if(!form_searcher_->hoveringStatics(v_theta, tf_object_origin_to_uav_root.inverse(), v_hover_thrust))
                     statics_validity = false;
@@ -303,25 +303,25 @@ namespace grasp_form_search
 
               /* 2.5 show the result of the validity */
               if(!kinematics_validity)
-                ROS_WARN("[full search] index: %d, delta:%f, l_delta:%f, u_delta:%f, kinematics invalid", index, delta, l_delta, u_delta);
+                ROS_WARN("[full search] index: %d, phi:%f, l_phi:%f, u_phi:%f, kinematics invalid", index, phi, l_phi, u_phi);
               if(kinematics_validity && !statics_validity)
-                ROS_ERROR("[full search] index: %d, delta:%f, l_delta:%f, u_delta:%f, statics invalid", index, delta, l_delta, u_delta);
+                ROS_ERROR("[full search] index: %d, phi:%f, l_phi:%f, u_phi:%f, statics invalid", index, phi, l_phi, u_phi);
               if(kinematics_validity && statics_validity)
-                ROS_INFO("[full search] index: %d, delta:%f, l_delta:%f, u_delta:%f, valid state", index, delta, l_delta, u_delta);
+                ROS_INFO("[full search] index: %d, phi:%f, l_phi:%f, u_phi:%f, valid state", index, phi, l_phi, u_phi);
 
               /* 3. update  */
               if(statics_validity)
                 {
 #if 1
-                  search_map_[0](index, 0) = thrust_weight_ * v_hover_thrust.norm() + torque_weight_ * v_tau.maxCoeff();
+                  search_map_.at(0)(index, 0) = thrust_weight_ * v_hover_thrust.norm() + torque_weight_ * v_tau.maxCoeff();
 #else
                   /* weighted sum */
                   double diff_min_ave_thrust = fabs(v_hover_thrust.minCoeff() - average_thrust);
                   double diff_max_ave_thrust = fabs(v_hover_thrust.maxCoeff() - average_thrust);
                   if(diff_max_ave_thrust > diff_min_ave_thrust)
-                    search_map_[0](index, 0) = thrust_weight_ * diff_max_ave_thrust + torque_weight_ * v_tau.maxCoeff();
+                    search_map_.at(0)(index, 0) = thrust_weight_ * diff_max_ave_thrust + torque_weight_ * v_tau.maxCoeff();
                   else
-                    search_map_[0](index, 0) = thrust_weight_ * diff_min_ave_thrust + torque_weight_ * v_tau.maxCoeff();
+                    search_map_.at(0)(index, 0) = thrust_weight_ * diff_min_ave_thrust + torque_weight_ * v_tau.maxCoeff();
 #endif
                 }
 
@@ -329,20 +329,20 @@ namespace grasp_form_search
                 {
                   if(kinematics_validity)
                     {
-                      log_ofs << delta << "\t" << search_map_[0](index, 0);
+                      log_ofs << phi << "\t" << search_map_.at(0)(index, 0);
                       if(statics_validity)
                         log_ofs << "\t" << v_tau.maxCoeff() << "\t"  << v_hover_thrust.maxCoeff() << "\t"  << v_hover_thrust.minCoeff()  << std::endl;
                     }
                 }
             }
 
-          for(int row = 0; row < search_map_[0].rows(); row++)
+          for(int row = 0; row < search_map_.at(0).rows(); row++)
             {
-              int delta_valid_range  = delta_valid_range_ / res_delta_;
+              int phi_valid_range  = phi_valid_range_ / res_phi_;
 
-              if(row + delta_valid_range >= search_map_[0].rows()) break;
+              if(row + phi_valid_range >= search_map_.at(0).rows()) break;
 
-              double cost_sum = search_map_[0].block(row, 0, delta_valid_range, 1).sum();
+              double cost_sum = search_map_.at(0).block(row, 0, phi_valid_range, 1).sum();
 
               //ROS_INFO("start patch search: cost_sum: %f, min_cost: %f", cost_sum, min_cost_sum);
 
@@ -351,9 +351,9 @@ namespace grasp_form_search
 
                   min_cost_sum = cost_sum;
                   if(search_verbose_) ROS_INFO("update min cost sum: %f", min_cost_sum);
-                  double center_delta = row * res_delta_ + l_delta + delta_valid_range_ / 2;
+                  double center_phi = row * res_phi_ + l_phi + phi_valid_range_ / 2;
 
-                  if(!form_searcher_->envelopingCalc(0, center_delta, v_best_theta, v_best_delta, v_best_contact_d, v_best_contact_p, v_best_contact_rot, v_best_joint_p, 0))
+                  if(!form_searcher_->envelopingCalc(0, center_phi, v_best_theta, v_best_phi, v_best_contact_d, v_best_contact_p, v_best_contact_rot, v_best_joint_p, 0, 0))
                     ROS_FATAL("[full search]: can not get the valid kinematics from the best confiugration");
                   /* check force-closure */
                   if(!form_searcher_->graspForceClosure(v_best_contact_p, v_best_contact_rot, v_best_joint_p, v_best_tau, v_best_min_f_fc))
@@ -362,27 +362,27 @@ namespace grasp_form_search
                   /* check hovering state */
                   tf::Transform tf_object_origin_to_uav_root;
                   tf::Vector3 uav_root_origin;
-                  tf::vectorEigenToTF(v_best_joint_p[0], uav_root_origin);
+                  tf::vectorEigenToTF(v_best_joint_p.at(0), uav_root_origin);
                   tf_object_origin_to_uav_root.setOrigin(uav_root_origin);
                   tf::Quaternion uav_root_q;
-                  tf::quaternionEigenToTF(Quaterniond(AngleAxisd(v_best_delta[0], Vector3d::UnitZ())), uav_root_q);
+                  tf::quaternionEigenToTF(Quaterniond(AngleAxisd(v_best_phi.at(0), Vector3d::UnitZ())), uav_root_q);
                   tf_object_origin_to_uav_root.setRotation(uav_root_q);
                   if(!form_searcher_->hoveringStatics(v_best_theta, tf_object_origin_to_uav_root.inverse(), v_best_hover_thrust))
                     ROS_FATAL("[full search]: can not get the valid hovering state from the best confiugration");
 
-                  /* set the valid range of the contact_d and delta */
-                  double valid_lower_delta = row * res_delta_ + l_delta;
-                  if(!form_searcher_->envelopingCalc(0, valid_lower_delta, v_valid_lower_bound_theta, v_valid_lower_bound_delta, v_valid_lower_bound_contact_d, v_contact_p, v_contact_rot, v_joint_p, 0))
+                  /* set the valid range of the contact_d and phi */
+                  double valid_lower_phi = row * res_phi_ + l_phi;
+                  if(!form_searcher_->envelopingCalc(0, valid_lower_phi, v_valid_lower_bound_theta, v_valid_lower_bound_phi, v_valid_lower_bound_contact_d, v_contact_p, v_contact_rot, v_joint_p, 0, 0))
                     ROS_FATAL("[full search]: can not get the valid kinematics from the valid lower bound configuration");
 
-                  double valid_upper_delta = row * res_delta_ + l_delta + delta_valid_range_;
-                  if(!form_searcher_->envelopingCalc(0, valid_upper_delta, v_valid_upper_bound_theta, v_valid_upper_bound_delta, v_valid_upper_bound_contact_d, v_contact_p, v_contact_rot, v_joint_p, 0))
+                  double valid_upper_phi = row * res_phi_ + l_phi + phi_valid_range_;
+                  if(!form_searcher_->envelopingCalc(0, valid_upper_phi, v_valid_upper_bound_theta, v_valid_upper_bound_phi, v_valid_upper_bound_contact_d, v_contact_p, v_contact_rot, v_joint_p, 0, 0))
                     ROS_FATAL("[full search]: can not get the valid kinematics from the valid upper bound configuration");
                 }
             }
 
           /* set the final result */
-          form_searcher_->setBestForceClosureResult(v_best_theta, v_valid_lower_bound_theta, v_valid_upper_bound_theta, v_best_delta, v_valid_lower_bound_delta, v_valid_upper_bound_delta, v_best_contact_p, v_best_contact_rot, v_best_joint_p, v_best_min_f_fc, v_best_tau, v_best_hover_thrust);
+          form_searcher_->setBestForceClosureResult(v_best_theta, v_valid_lower_bound_theta, v_valid_upper_bound_theta, v_best_phi, v_valid_lower_bound_phi, v_valid_upper_bound_phi, v_best_contact_p, v_best_contact_rot, v_best_joint_p, v_best_min_f_fc, v_best_tau, v_best_hover_thrust);
           break;
         }
       default:

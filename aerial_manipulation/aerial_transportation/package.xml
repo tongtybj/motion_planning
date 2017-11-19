@@ -45,5 +45,6 @@
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <aerial_transportation plugin="${prefix}/grasp_form_search_algorithm_plugins.xml" />
+    <aerial_transportation plugin="${prefix}/grasp_motion_planner_plugins.xml" />
   </export>
 </package>

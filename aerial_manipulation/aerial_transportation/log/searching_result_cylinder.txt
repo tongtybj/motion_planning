@@ -6,17 +6,17 @@ v_best_contact_p:
 0.124283 -0.0133669
 0.0199128 0.123404
 -0.120567 0.0329948
-v_best_delta: 
+v_best_phi: 
 -0.0295052
 0.0295052
 -0.0295052
 0.0295052
-v_valid_lower_bound_delta: 
+v_valid_lower_bound_phi: 
 -0.0730052
 0.0730052
 -0.0730052
 0.0730052
-v_valid_upper_bound_delta: 
+v_valid_upper_bound_phi: 
 0.0139948
 -0.0139948
 0.0139948
@@ -47,3 +47,5 @@ v_best_joint_p:
 0.299869 -0.33385
 0.346403 0.264342
 -0.242857 0.377357
+object_inertia: 
+1 0 0 0 0.0114062 0.0114062 0.0078125 0 0 0

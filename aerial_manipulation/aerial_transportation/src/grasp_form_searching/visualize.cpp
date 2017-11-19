@@ -51,14 +51,14 @@ namespace grasp_form_search
   {
     std::cout << "Searching Result: " << std::endl;
 
-    std::cout << "v_best_delta: [ ";
-    for(int j = 0; j < v_best_delta_.size() ; j ++) std::cout << v_best_delta_[j] << " ";
+    std::cout << "v_best_phi: [ ";
+    for(int j = 0; j < v_best_phi_.size() ; j ++) std::cout << v_best_phi_[j] << " ";
     std::cout << "]" << std::endl;
-    std::cout << "v_valid_lower_bound_delta: [ ";
-    for(int j = 0; j < v_valid_lower_bound_delta_.size() ; j ++) std::cout << v_valid_lower_bound_delta_[j] << " ";
+    std::cout << "v_valid_lower_bound_phi: [ ";
+    for(int j = 0; j < v_valid_lower_bound_phi_.size() ; j ++) std::cout << v_valid_lower_bound_phi_[j] << " ";
     std::cout << "]" << std::endl;
-    std::cout << "v_valid_upper_bound_delta: [ ";
-    for(int j = 0; j < v_valid_upper_bound_delta_.size() ; j ++) std::cout << v_valid_upper_bound_delta_[j] << " ";
+    std::cout << "v_valid_upper_bound_phi: [ ";
+    for(int j = 0; j < v_valid_upper_bound_phi_.size() ; j ++) std::cout << v_valid_upper_bound_phi_[j] << " ";
     std::cout << "]" << std::endl;
 
     if(object_type_ == aerial_transportation::ObjectConfigure::Request::CONVEX_POLYGONAL_COLUMN)
@@ -104,7 +104,7 @@ namespace grasp_form_search
 
         ofs << "v_vertex_info: " << std::endl;
         for(int i = 0; i < object_.size(); i++)
-          ofs << object_[i]->vertex_p_(0) << " " << object_[i]->vertex_p_(1)  << " " << object_[i]->psi_ << " " <<  object_[i]->len_ << " " <<  object_[i]->contact_rot_.x() <<  " " <<  object_[i]->contact_rot_.y() << " " <<  object_[i]->contact_rot_.z() << " " <<  object_[i]->contact_rot_.w() << std::endl;
+          ofs << object_.at(i)->vertex_p_(0) << " " << object_.at(i)->vertex_p_(1)  << " " << object_.at(i)->psi_ << " " <<  object_.at(i)->len_ << " " <<  object_.at(i)->contact_rot_.x() <<  " " <<  object_.at(i)->contact_rot_.y() << " " <<  object_.at(i)->contact_rot_.z() << " " <<  object_.at(i)->contact_rot_.w() << std::endl;
       }
 
     else if(object_type_ == aerial_transportation::ObjectConfigure::Request::CYLINDER)
@@ -114,30 +114,30 @@ namespace grasp_form_search
 
     ofs << "v_best_contact_p: " << std::endl;
     for(int i = 0; i < contact_num_; i++)
-      ofs << v_best_contact_p_[i](0) << " " << v_best_contact_p_[i](1) << std::endl;
+      ofs << v_best_contact_p_.at(i)(0) << " " << v_best_contact_p_.at(i)(1) << std::endl;
 
-    ofs << "v_best_delta: " << std::endl;
-    for(int i = 0; i < contact_num_; i++) ofs << v_best_delta_[i] << std::endl;
-    ofs << "v_valid_lower_bound_delta: " << std::endl;
-    for(int i = 0; i < contact_num_; i++) ofs << v_valid_lower_bound_delta_[i] << std::endl;
-    ofs << "v_valid_upper_bound_delta: " << std::endl;
-    for(int i = 0; i < contact_num_; i++) ofs << v_valid_upper_bound_delta_[i] << std::endl;
+    ofs << "v_best_phi: " << std::endl;
+    for(int i = 0; i < contact_num_; i++) ofs << v_best_phi_.at(i) << std::endl;
+    ofs << "v_valid_lower_bound_phi: " << std::endl;
+    for(int i = 0; i < contact_num_; i++) ofs << v_valid_lower_bound_phi_.at(i) << std::endl;
+    ofs << "v_valid_upper_bound_phi: " << std::endl;
+    for(int i = 0; i < contact_num_; i++) ofs << v_valid_upper_bound_phi_.at(i) << std::endl;
     if(object_type_ == aerial_transportation::ObjectConfigure::Request::CONVEX_POLYGONAL_COLUMN)
       {
         ofs << "v_best_contact_d: " << std::endl;
-        for(int i = 0; i < contact_num_; i++) ofs << v_best_contact_d_[i] << std::endl;
+        for(int i = 0; i < contact_num_; i++) ofs << v_best_contact_d_.at(i) << std::endl;
         ofs << "v_valid_lower_bound_contact_d: " << std::endl;
-        for(int i = 0; i < contact_num_; i++) ofs << v_valid_lower_bound_contact_d_[i] << std::endl;
+        for(int i = 0; i < contact_num_; i++) ofs << v_valid_lower_bound_contact_d_.at(i) << std::endl;
         ofs << "v_valid_upper_bound_contact_d: " << std::endl;
-        for(int i = 0; i < contact_num_; i++) ofs << v_valid_upper_bound_contact_d_[i] << std::endl;
+        for(int i = 0; i < contact_num_; i++) ofs << v_valid_upper_bound_contact_d_.at(i) << std::endl;
       }
 
     ofs << "v_best_theta: " << std::endl;
-    for(int i = 0; i < contact_num_ - 1 ; i++) ofs << v_best_theta_[i] << " " << std::endl;
+    for(int i = 0; i < contact_num_ - 1 ; i++) ofs << v_best_theta_.at(i) << " " << std::endl;
     ofs << "v_valid_lower_bound_theta: " << std::endl;
-    for(int i = 0; i < contact_num_ - 1 ; i++) ofs << v_valid_lower_bound_theta_[i] << " " << std::endl;
+    for(int i = 0; i < contact_num_ - 1 ; i++) ofs << v_valid_lower_bound_theta_.at(i) << " " << std::endl;
     ofs << "v_valid_upper_bound_theta: " << std::endl;
-    for(int i = 0; i < contact_num_ - 1 ; i++) ofs << v_valid_upper_bound_theta_[i] << " " << std::endl;
+    for(int i = 0; i < contact_num_ - 1 ; i++) ofs << v_valid_upper_bound_theta_.at(i) << " " << std::endl;
 
     ofs << "v_best_tau: " << std::endl;
     for(int i = 0; i < v_best_tau_.size(); i++) ofs << v_best_tau_(i) << std::endl;
@@ -147,7 +147,11 @@ namespace grasp_form_search
 
     ofs << "v_best_joint_p: " << std::endl;
     for(int i = 0; i < contact_num_; i++)
-      ofs << v_best_joint_p_[i](0) << " " << v_best_joint_p_[i](1) << std::endl;
+      ofs << v_best_joint_p_.at(i)(0) << " " << v_best_joint_p_.at(i)(1) << std::endl;
+
+    ofs << "object_inertia: " << std::endl;
+    ofs << object_inertia_.m << " " << object_inertia_.com.x << " " << object_inertia_.com.y << " " << object_inertia_.com.z << " " << object_inertia_.ixx << " " << object_inertia_.iyy << " " << object_inertia_.izz << " " << object_inertia_.ixy << " " << object_inertia_.ixz << " " << object_inertia_.iyz <<  std::endl;
+
   }
 
   void GraspFormSearch::getResultFromFile()
@@ -204,7 +208,7 @@ namespace grasp_form_search
                      i + 1, vertex_p(0), vertex_p(1), contact_rot.x(), contact_rot.y(), contact_rot.z(), contact_rot.w(), psi, len);
 
             object_.push_back(VertexHandlePtr(new VertexHandle(psi, contact_rot, vertex_p)));
-            object_[i]->len_ = len;
+            object_.at(i)->len_ = len;
           }
       }
     else if(object_type_ == aerial_transportation::ObjectConfigure::Request::CYLINDER)
@@ -225,21 +229,21 @@ namespace grasp_form_search
     v_best_min_f_fc_ = VectorXd::Constant(contact_num_, 1e6);
     v_best_hover_thrust_ = VectorXd::Constant(uav_kinematics_->getRotorNum(), 0);
     v_best_theta_.resize(contact_num_ - 1);
-    v_best_delta_.resize(contact_num_);
+    v_best_phi_.resize(contact_num_);
     v_best_contact_d_.resize(contact_num_);
     v_best_contact_p_.resize(contact_num_, Vector3d(0, 0, 0));
     v_best_joint_p_.resize(contact_num_, Vector3d(0, 0, 0));
     v_best_contact_rot_.resize(contact_num_, Quaterniond(1, 0, 0, 0));
     v_valid_lower_bound_theta_.resize(contact_num_ -1 );
-    v_valid_lower_bound_delta_.resize(contact_num_);
+    v_valid_lower_bound_phi_.resize(contact_num_);
     v_valid_lower_bound_contact_d_.resize(contact_num_);
     v_valid_upper_bound_theta_.resize(contact_num_ -1 );
-    v_valid_upper_bound_delta_.resize(contact_num_);
+    v_valid_upper_bound_phi_.resize(contact_num_);
     v_valid_upper_bound_contact_d_.resize(contact_num_);
 
     /* special process for convex contact rot */
     if(object_type_ == aerial_transportation::ObjectConfigure::Request::CONVEX_POLYGONAL_COLUMN)
-      v_best_contact_rot_[0] = object_[best_start_side_]->contact_rot_;
+      v_best_contact_rot_.at(0) = object_[best_start_side_]->contact_rot_;
 
     std::getline(ifs, str);
     ss[5].str(str);
@@ -250,8 +254,8 @@ namespace grasp_form_search
         std::stringstream ss_tmp;
         std::getline(ifs, str);
         ss_tmp.str(str);
-        ss_tmp >> v_best_contact_p_[i](0) >> v_best_contact_p_[i](1);
-        ROS_INFO("[%f, %f]", v_best_contact_p_[i](0), v_best_contact_p_[i](1));
+        ss_tmp >> v_best_contact_p_.at(i)(0) >> v_best_contact_p_.at(i)(1);
+        ROS_INFO("[%f, %f]", v_best_contact_p_.at(i)(0), v_best_contact_p_.at(i)(1));
       }
 
     std::getline(ifs, str);
@@ -263,8 +267,8 @@ namespace grasp_form_search
         std::stringstream ss_tmp;
         std::getline(ifs, str);
         ss_tmp.str(str);
-        ss_tmp >> v_best_delta_[i];
-        ROS_INFO("%f", v_best_delta_[i]);
+        ss_tmp >> v_best_phi_.at(i);
+        ROS_INFO("%f", v_best_phi_.at(i));
       }
 
     std::getline(ifs, str);
@@ -276,8 +280,8 @@ namespace grasp_form_search
         std::stringstream ss_tmp;
         std::getline(ifs, str);
         ss_tmp.str(str);
-        ss_tmp >> v_valid_lower_bound_delta_[i];
-        ROS_INFO("%f", v_valid_lower_bound_delta_[i]);
+        ss_tmp >> v_valid_lower_bound_phi_.at(i);
+        ROS_INFO("%f", v_valid_lower_bound_phi_.at(i));
       }
 
     std::getline(ifs, str);
@@ -289,8 +293,8 @@ namespace grasp_form_search
         std::stringstream ss_tmp;
         std::getline(ifs, str);
         ss_tmp.str(str);
-        ss_tmp >> v_valid_upper_bound_delta_[i];
-        ROS_INFO("%f", v_valid_upper_bound_delta_[i]);
+        ss_tmp >> v_valid_upper_bound_phi_.at(i);
+        ROS_INFO("%f", v_valid_upper_bound_phi_.at(i));
       }
 
     if(object_type_ == aerial_transportation::ObjectConfigure::Request::CONVEX_POLYGONAL_COLUMN)
@@ -305,8 +309,8 @@ namespace grasp_form_search
             std::stringstream ss_tmp;
             std::getline(ifs, str);
             ss_tmp.str(str);
-            ss_tmp >> v_best_contact_d_[i];
-            ROS_INFO("%f", v_best_contact_d_[i]);
+            ss_tmp >> v_best_contact_d_.at(i);
+            ROS_INFO("%f", v_best_contact_d_.at(i));
           }
 
         std::getline(ifs, str);
@@ -318,8 +322,8 @@ namespace grasp_form_search
             std::stringstream ss_tmp;
             std::getline(ifs, str);
             ss_tmp.str(str);
-            ss_tmp >> v_valid_lower_bound_contact_d_[i];
-            ROS_INFO("%f", v_valid_lower_bound_contact_d_[i]);
+            ss_tmp >> v_valid_lower_bound_contact_d_.at(i);
+            ROS_INFO("%f", v_valid_lower_bound_contact_d_.at(i));
           }
 
         std::getline(ifs, str);
@@ -331,8 +335,8 @@ namespace grasp_form_search
             std::stringstream ss_tmp;
             std::getline(ifs, str);
             ss_tmp.str(str);
-            ss_tmp >> v_valid_upper_bound_contact_d_[i];
-            ROS_INFO("%f", v_valid_upper_bound_contact_d_[i]);
+            ss_tmp >> v_valid_upper_bound_contact_d_.at(i);
+            ROS_INFO("%f", v_valid_upper_bound_contact_d_.at(i));
           }
 
       }
@@ -346,8 +350,8 @@ namespace grasp_form_search
         std::stringstream ss_tmp;
         std::getline(ifs, str);
         ss_tmp.str(str);
-        ss_tmp >> v_best_theta_[i];
-        ROS_INFO("%f", v_best_theta_[i]);
+        ss_tmp >> v_best_theta_.at(i);
+        ROS_INFO("%f", v_best_theta_.at(i));
       }
 
     std::getline(ifs, str);
@@ -359,8 +363,8 @@ namespace grasp_form_search
         std::stringstream ss_tmp;
         std::getline(ifs, str);
         ss_tmp.str(str);
-        ss_tmp >> v_valid_lower_bound_theta_[i];
-        ROS_INFO("%f", v_valid_lower_bound_theta_[i]);
+        ss_tmp >> v_valid_lower_bound_theta_.at(i);
+        ROS_INFO("%f", v_valid_lower_bound_theta_.at(i));
       }
 
     std::getline(ifs, str);
@@ -372,8 +376,8 @@ namespace grasp_form_search
         std::stringstream ss_tmp;
         std::getline(ifs, str);
         ss_tmp.str(str);
-        ss_tmp >> v_valid_upper_bound_theta_[i];
-        ROS_INFO("%f", v_valid_upper_bound_theta_[i]);
+        ss_tmp >> v_valid_upper_bound_theta_.at(i);
+        ROS_INFO("%f", v_valid_upper_bound_theta_.at(i));
       }
 
     std::getline(ifs, str);
@@ -411,9 +415,17 @@ namespace grasp_form_search
         std::stringstream ss_tmp;
         std::getline(ifs, str);
         ss_tmp.str(str);
-        ss_tmp >> v_best_joint_p_[i](0) >> v_best_joint_p_[i](1);
-        ROS_INFO("[%f, %f]", v_best_joint_p_[i](0), v_best_joint_p_[i](1));
+        ss_tmp >> v_best_joint_p_.at(i)(0) >> v_best_joint_p_.at(i)(1);
+        ROS_INFO("[%f, %f]", v_best_joint_p_.at(i)(0), v_best_joint_p_.at(i)(1));
       }
+
+    std::getline(ifs, str);
+    ss[15].str(str);
+    ss[15] >> header;
+    std::getline(ifs, str);
+    ss[16].str(str);
+    ss[16] >> object_inertia_.m >> object_inertia_.com.x >> object_inertia_.com.y >> object_inertia_.com.z >> object_inertia_.ixx >> object_inertia_.iyy >> object_inertia_.izz >> object_inertia_.ixy >> object_inertia_.ixz >> object_inertia_.iyz;
+    ROS_INFO("getResultFromFile: %s: mass: %f, com: [%f, %f, %f], inertia: [%f, %f, %f, %f, %f, %f,]", header.c_str(), object_inertia_.m , object_inertia_.com.x , object_inertia_.com.y , object_inertia_.com.z , object_inertia_.ixx , object_inertia_.iyy , object_inertia_.izz , object_inertia_.ixy , object_inertia_.ixz , object_inertia_.iyz);
 
     search_flag_ = true;
   }
@@ -433,8 +445,8 @@ namespace grasp_form_search
       {
         std::stringstream joint_no;
         joint_no << i + 1;
-        if(i < contact_num_ - 1) searching_joint_states.position[i] = v_best_theta_[i];
-        searching_joint_states.name[i] = std::string("joint") + joint_no.str();
+        if(i < contact_num_ - 1) searching_joint_states.position.at(i) = v_best_theta_.at(i);
+        searching_joint_states.name.at(i) = std::string("joint") + joint_no.str();
       }
 
     joint_states_pub_.publish(searching_joint_states);
@@ -444,11 +456,11 @@ namespace grasp_form_search
 
     tf::Transform tf_object_origin_to_uav_root;
     tf::Vector3 uav_root_origin;
-    tf::vectorEigenToTF(v_best_joint_p_[0], uav_root_origin);
+    tf::vectorEigenToTF(v_best_joint_p_.at(0), uav_root_origin);
     tf_object_origin_to_uav_root.setOrigin(uav_root_origin);
     tf::Quaternion uav_root_q;
 
-    tf::quaternionEigenToTF(v_best_contact_rot_[0] * AngleAxisd(v_best_delta_[0], Vector3d::UnitZ()), uav_root_q);
+    tf::quaternionEigenToTF(v_best_contact_rot_.at(0) * AngleAxisd(v_best_phi_.at(0), Vector3d::UnitZ()), uav_root_q);
     tf_object_origin_to_uav_root.setRotation(uav_root_q);
     br_.sendTransform(tf::StampedTransform(tf_object_origin_to_uav_root.inverse(), ros::Time::now(), link1_frame_name_, object_frame_name_));
   }

@@ -55,6 +55,8 @@ namespace grasp_form_search
     if(verbose_) std::cout << "[grasp form search] link_length: " << link_length_ << std::endl;
     nhp_.param("duct_radius", duct_radius_, 0.0);
     if(verbose_) std::cout << "[grasp form search] duct_radius: " << duct_radius_ << std::endl;
+    nhp_.param("baselink", baselink_, 0);
+    if(verbose_) std::cout << "[grasp form search] baselink: " << baselink_ << std::endl;
 
     std::string srv_name;
     nhp_.param("object_configuration_srv_name", srv_name, std::string("/target_object_configuration"));
@@ -122,7 +124,7 @@ namespace grasp_form_search
     v_best_hover_thrust_ = VectorXd::Constant(1, 0);
 
     v_best_theta_.clear();
-    v_best_delta_.clear();
+    v_best_phi_.clear();
     v_best_contact_d_.clear();
     v_best_contact_p_.clear();
     v_best_contact_rot_.clear();
@@ -131,7 +133,7 @@ namespace grasp_form_search
     v_valid_lower_bound_theta_.clear();
     v_valid_lower_bound_contact_d_.clear();
     v_valid_upper_bound_theta_.clear();
-    v_valid_upper_bound_delta_.clear();
+    v_valid_upper_bound_phi_.clear();
     v_valid_upper_bound_contact_d_.clear();
     assert(object_.size() == 0); //check
 
@@ -147,7 +149,7 @@ namespace grasp_form_search
       }
     std::vector<Vector3d> vertices(0);
     for(int i = 0; i < req.vertices.size(); i++)
-      vertices.push_back(Vector3d(req.vertices[i].x, req.vertices[i].y, req.vertices[i].z));
+      vertices.push_back(Vector3d(req.vertices.at(i).x, req.vertices.at(i).y, req.vertices.at(i).z));
 
     if(!objectConfiguration(req.object_type, req.inertia, vertices))
       {
@@ -198,7 +200,7 @@ namespace grasp_form_search
       {
       case aerial_transportation::ObjectConfigure::Request::CONVEX_POLYGONAL_COLUMN:
         {
-          float abs_psi = 0;
+          float abs_psi = atan2(vertices.at(1)(1) -vertices.at(0)(1), vertices.at(1)(0) -vertices.at(0)(0));
           Vector3d object_cog_tmp(0, 0, 0);
           /* fill the object information */
 
@@ -214,22 +216,22 @@ namespace grasp_form_search
               int convex_current = i % vertices.size();
               int convex_next = (i + 1) % vertices.size();
 
-              float psi = atan2(vertices[convex_next](1) -vertices[convex_current](1), vertices[convex_next](0) -vertices[convex_current](0))
-                - atan2(vertices[convex_current](1) - vertices[convex_prev](1), vertices[convex_current](0) - vertices[convex_prev](0));
+              float psi = atan2(vertices.at(convex_next)(1) -vertices.at(convex_current)(1), vertices.at(convex_next)(0) -vertices.at(convex_current)(0))
+                - atan2(vertices.at(convex_current)(1) - vertices.at(convex_prev)(1), vertices.at(convex_current)(0) - vertices.at(convex_prev)(0));
 
               if(psi < - M_PI ) psi += (2 * M_PI);
               assert(psi > 0 && psi < M_PI);
 
               if(i > 0) abs_psi +=  psi;
 
-              object_.push_back(VertexHandlePtr(new VertexHandle(psi, Quaterniond(AngleAxisd(abs_psi, Vector3d::UnitZ())), vertices[i])));
+              object_.push_back(VertexHandlePtr(new VertexHandle(psi, Quaterniond(AngleAxisd(abs_psi, Vector3d::UnitZ())), vertices.at(i))));
               /* set the side length */
-              object_[i]->len_ =  (vertices[(i + 1) % vertices.size()] - vertices[i]).norm();
+              object_.at(i)->len_ =  (vertices.at((i + 1) % vertices.size()) - vertices.at(i)).norm();
 
               if(i < uav_kinematics_->getRotorNum()) contact_num_ ++;
-              ROS_INFO("[objectConfiguration] vertex %d: [%f, %f, %f], rel psi: %f, abs psi: %f", i, vertices[i].x(), vertices[i].y(), vertices[i].z(), psi, abs_psi);
+              ROS_INFO("[objectConfiguration] vertex %d: [%f, %f, %f], rel psi: %f, abs psi: %f", i, vertices.at(i).x(), vertices.at(i).y(), vertices.at(i).z(), psi, abs_psi);
 
-              object_cog_tmp += vertices[i];
+              object_cog_tmp += vertices.at(i);
             }
           if(object_cog == VectorXd::Zero(3)) tf::vectorEigenToMsg(object_cog_tmp / vertices.size(), object_inertia_.com);
           ROS_INFO("[objectConfiguration]:  contact num: %d, cog of object is [%f, %f, %f,]", contact_num_, object_inertia_.com.x, object_inertia_.com.y, object_inertia_.com.z);
@@ -245,7 +247,7 @@ namespace grasp_form_search
               return false;
             }
 
-          object_radius_ = vertices[0](0) / 2;
+          object_radius_ = vertices.at(0)(0) / 2;
           if(!cylinderInitEnvelopCheck(contact_num_)) return false;
           for(int i = 0; i < contact_num_; i++)
             object_.push_back(VertexHandlePtr(new VertexHandle()));
@@ -272,16 +274,18 @@ namespace grasp_form_search
 
   bool GraspFormSearch::graspKinematicsStaticsTest()
   {
-    float d = 0.01;
-    float delta = 0;
+    float d = 0.0;
+    float phi = -0.027;
 
     if(object_type_ == aerial_transportation::ObjectConfigure::Request::CONVEX_POLYGONAL_COLUMN)
       {
-        //d = object_[1]->vertex_p_(0) / 2;
+        d = (object_[1]->vertex_p_(0)- object_[0]->vertex_p_(0)) / 2;
+        d = 0.225;//0.116321;
+        phi = 0.159704;//-0.180274;
         ROS_INFO("test grasp planner: first contact distance: %f", d);
       }
 
-    if(!envelopingCalc(d, delta, v_best_theta_, v_best_delta_, v_best_contact_d_, v_best_contact_p_, v_best_contact_rot_, v_best_joint_p_, 0))
+    if(!envelopingCalc(d, phi, v_best_theta_, v_best_phi_, v_best_contact_d_, v_best_contact_p_, v_best_contact_rot_, v_best_joint_p_, baselink_,0))
       {
         ROS_WARN("[grasp kineatics statics test]: can not get valid enveloping result");
         return false;
@@ -296,10 +300,10 @@ namespace grasp_form_search
 
     tf::Transform tf_object_origin_to_uav_root;
     tf::Vector3 uav_root_origin;
-    tf::vectorEigenToTF(v_best_joint_p_[0], uav_root_origin);
+    tf::vectorEigenToTF(v_best_joint_p_.at(0), uav_root_origin);
     tf_object_origin_to_uav_root.setOrigin(uav_root_origin);
     tf::Quaternion uav_root_q;
-    tf::quaternionEigenToTF(object_[0]->contact_rot_ * AngleAxisd(delta, Vector3d::UnitZ()), uav_root_q);
+    tf::quaternionEigenToTF(object_.at(0)->contact_rot_ * AngleAxisd(v_best_phi_.at(0), Vector3d::UnitZ()), uav_root_q);
     tf_object_origin_to_uav_root.setRotation(uav_root_q);
     if(!hoveringStatics(v_best_theta_, tf_object_origin_to_uav_root.inverse(), v_best_hover_thrust_))
       {

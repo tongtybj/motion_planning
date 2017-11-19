@@ -1,0 +1,5 @@
+<library path="lib/libgrasp_motion_planning_pluginlib">
+  <class name="grasp_motion/whole_body" type="grasp_motion::WholeBody" base_class_type="grasp_motion::Base">
+    <description>whole-body grasping motion planner.</description>
+  </class>
+</library>

@@ -3,6 +3,7 @@
 link_length: 0.6 # hydrus3: 0.44 
 duct_radius: 0.2 # hydrus3: 0.15 #real is + 0.9(sponge)
 joint_states_pub_name: /hydrusx/joint_states
+baselink: 2
 
 # transform controller
 kinematic_verbose: false

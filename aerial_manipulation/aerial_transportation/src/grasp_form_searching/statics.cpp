@@ -171,11 +171,11 @@ namespace grasp_form_search
     for(int i = 0; i < contact_num_; i++)
       {
         /* G_c = [R_c [P_oc x]R_c] */
-        Quaternion<double> R_ci = v_contact_rot[i] * AngleAxisd(M_PI / 2, Vector3d::UnitZ()); //absolute angle from first link
+        Quaternion<double> R_ci = v_contact_rot.at(i) * AngleAxisd(M_PI / 2, Vector3d::UnitZ()); //absolute angle from first link
 
         MatrixXd G_ci(6, 3);
         G_ci.block(0, 0, 3, 3) = R_ci.matrix();
-        G_ci.block(3, 0, 3, 3) = skew(v_contact_p[i] - object_com) * R_ci.matrix();
+        G_ci.block(3, 0, 3, 3) = skew(v_contact_p.at(i) - object_com) * R_ci.matrix();
 
         //TODO remove!!!
         for(int j = 0; j < 6; j++)
@@ -253,7 +253,7 @@ namespace grasp_form_search
             if(i - j > 0)
               {
                 Vector3d e_z(0,0,1);
-                J_b_ij.block(0, 0, 3, 1) = e_z.cross(v_contact_p[i] - v_joint_p[j + 1]);
+                J_b_ij.block(0, 0, 3, 1) = e_z.cross(v_contact_p.at(i) - v_joint_p.at(j + 1));
                 J_b_ij.block(3, 0, 3, 1) = e_z;
                 J_b_i.block(0, j, 6 , 1) = J_b_ij;
               }
@@ -289,8 +289,8 @@ namespace grasp_form_search
       {
         std::stringstream joint_no;
         joint_no << i + 1;
-        if(i < contact_num_ - 1) joint_states.position[i] = v_theta[i];
-        joint_states.name[i] = std::string("joint") + joint_no.str();
+        if(i < contact_num_ - 1) joint_states.position.at(i) = v_theta.at(i);
+        joint_states.name.at(i) = std::string("joint") + joint_no.str();
       }
 
     uav_kinematics_->kinematics(joint_states);
