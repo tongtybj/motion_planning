@@ -25,5 +25,4 @@
     <param name="file_result_flag" value ="$(arg file_result_flag)" unless = "$(arg play_file_flag)"/>
     <param name="searching_file_name" value = "$(find aerial_transportation)/log/searching_result_$(arg object).txt"/>
   </node>
-
 </launch>

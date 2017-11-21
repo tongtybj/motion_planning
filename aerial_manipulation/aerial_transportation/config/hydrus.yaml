@@ -6,51 +6,39 @@ joint_states_pub_name: /hydrusx/joint_states
 baselink: 2
 
 # transform controller
-kinematic_verbose: false
-control_verbose: false
-f_max: 15
-f_min: 2
+transform_controller/baselink: fc
+transform_controller/verbose: true
+transform_controller/kinematic_verbose: false
+transform_controller/control_verbose: false
+transform_controller/f_max: 15
+transform_controller/f_min: 2
 
-######################### Grasp Planning
 
-joint_motors_sub_name: /motor_states/joints_port
-joint_ctrl_pub_name: /hydrusx/joints_ctrl
-joint_states_sub_name: /hydrusx/joint_states
-
-aerial_transportation_plugin_name: aerial_transportation/hydrus
-
-nav_vel_limit: 0.3
-vel_nav_threshold: 0.2
-
-object_approach_offset_x: -0.15
-object_approach_offset_y: 0.3
-
-approach_pos_threshold: 0.1
-approach_count: 1.0
+####################### Grasp Motion
+debug_verbose: false
 object_head_direction: true
+grasp_motion_planner_plugin_name: grasp_motion/whole_body
+approach_delta_angle: -0.45
 
-object_height: 0.035 # set to the grasp height
-grasping_height_threshold: 0.005
-grasping_height_offset: 0.0
+pose_fixed_count: 1.0
+grasping_height_threshold: 0.01
+approach_offset_dist: 0.15
+approach_acc_tilt_angle: 0.034 # 2[deg]
+contact_tilt_angle: 0.03
+contact_vel_threshold: 0.02
+rolling_angle_threshold: 0.1
+rolling_yaw_threshold: 0.1
+default_yaw_p_gain: 110
+rolling_yaw_p_gain: 1000
 
-ascending_speed: 0.1
-transportation_threshold: 0.15
-transportation_count: 1.0
+############################# Joint
+grasp_min_torque: 120 # 0.2; max: 648
+grasp_max_torque: 320 # 0.5; max: 648
+grasping_duration: 0.5
+angle_control_idle_duration: 0.5
+overload_check_duration: 0.5
+rough_grasping_delta_angle: 0.015
+torque_grasping_delta_angle: 0.005
+torque_grasp_threshold: 35 # 0.05 max: 648
+torque_grasp_min_torque_rate: 1.0
 
-torque_min_threshold: 0.3
-torque_max_threshold: 0.8 #deprecated
-
-modification_delta_angle: 0.01
-
-# grasp config
-tighten_delta_angle: 0.10 #hydrusx_quad: box, cylinder: 0.1; hydrus3: box, cylinder: 0.14
-grasping_rate: 4.0 #hydrusx_quad: box cylinder: 4.0; hydrus3: box: 2.0, cylinder: 1.0?
-
-# approach config
-approach_base_link: 2 #approaching start from 0; link2(==1) for hydrus3; link3(==2) for hydrusx_quad
-approach_delta_angle: -0.4
-approach_pos_weight_rate: 10 #hydrusx: box: 10 cylinder: 10 (4 maybe better?)  old: 10.0 #weight algorithm
-approach_angle_weight_rate: 100.0 #weight algorithm
-
-# no velocity control gain change if uncomment following line
-#aerial_grasping_flight_velocity_control_pub_name: none

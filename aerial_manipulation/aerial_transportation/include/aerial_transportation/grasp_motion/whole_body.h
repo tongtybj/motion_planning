@@ -54,6 +54,11 @@
 /* grasp form searching node */
 #include <aerial_transportation/grasp_form_searching/grasp_form_search.h>
 
+/* set control gain: dynamic reconfigure by rosserive */
+#include <dynamic_reconfigure/DoubleParameter.h>
+#include <dynamic_reconfigure/Reconfigure.h>
+#include <dynamic_reconfigure/Config.h>
+
 namespace grasp_motion
 {
   enum grasp_phase
@@ -204,6 +209,8 @@ namespace roll_motion
     double grasping_duration_; //the hold ok time count
     double grasp_min_torque_; // guarantee force-closure
     double grasp_max_torque_; // avoid overload
+
+    bool rolling_motion_test_;
   };
 
   class WholeBody :public grasp_motion::Base
@@ -231,6 +238,7 @@ namespace roll_motion
     ros::Publisher  flight_config_pub_;
     ros::Subscriber joint_states_sub_;
     ros::Subscriber joint_motors_sub_;
+    ros::ServiceClient control_gain_client_;
 
     /* plugin for grasp searching */
     boost::shared_ptr<grasp_form_search::GraspFormSearch> grasp_form_search_method_;
@@ -254,6 +262,9 @@ namespace roll_motion
     double rolling_angle_threshold_;
     double rolling_yaw_threshold_;
 
+    double default_yaw_p_gain_;
+    double rolling_yaw_p_gain_;
+
     /* base function */
     tf::Vector3 getBaseLinkRotorOrigin()
     {
@@ -267,6 +278,7 @@ namespace roll_motion
     void jointStatesCallback(const sensor_msgs::JointStateConstPtr& joint_states_msg); //get calibrated joints angle vector
     void jointMotorStatusCallback(const dynamixel_msgs::MotorStateListConstPtr& joint_motors_msg); //get the torque load nad temprature from each joint
 
+    void sendControlGain(double gain);
   };
 };
 #endif

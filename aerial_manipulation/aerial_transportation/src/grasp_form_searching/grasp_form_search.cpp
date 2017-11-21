@@ -42,7 +42,7 @@ namespace grasp_form_search
   GraspFormSearch::GraspFormSearch(ros::NodeHandle nh, ros::NodeHandle nhp): nh_(nh), nhp_(nhp)
   {
     reset();
-    uav_kinematics_ = boost::shared_ptr<TransformController>(new TransformController(nh_, nhp_, false));
+    uav_kinematics_ = boost::shared_ptr<TransformController>(new TransformController(ros::NodeHandle(nh_, "transform_controller"), ros::NodeHandle(nhp_, "transform_controller") , false));
 
     /* initialize the multilink(hydrus) kinematics */
     kinematicsInit();
@@ -76,10 +76,11 @@ namespace grasp_form_search
         ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
       }
     double func_loop_rate;
-    nhp_.param("func_loop_rate", func_loop_rate, 10.0);
+    nhp_.param("search_func_loop_rate", func_loop_rate, 10.0);
 
     /* timer init */
-    func_timer_ = nhp_.createTimer(ros::Duration(1.0 / func_loop_rate), &GraspFormSearch::mainFunc,this);
+    if(func_loop_rate > 0)
+      func_timer_ = nhp_.createTimer(ros::Duration(1.0 / func_loop_rate), &GraspFormSearch::mainFunc,this);
 
   }
 

@@ -48,7 +48,7 @@
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Joy.h>
 #include <geometry_msgs/Point.h>
-#include <geometry_msgs/Pose2D.h>
+#include <geometry_msgs/Vector3Stamped.h>
 #include <tf/LinearMath/Transform.h> /* for vector3 */
 #include <tf/transform_datatypes.h>
 #include <std_srvs/SetBool.h>
@@ -116,7 +116,7 @@ public:
 
   /* config of target object */
   tf::Vector3 object_offset_; //[x,y,psi], the offset from the COG of object to the position control point of uav with the respect to world frame
-  double object_height_; // in cheat mode, this is obtained by rosparam
+  double grasping_height_; // in cheat mode, this is obtained by rosparam
 
   /* config of recycle box */
   tf::Vector3 box_pos_; // in cheat mode, this is obtained by rosparam
@@ -158,7 +158,7 @@ private:
   void rosParamInit();
 
   void odomCallback(const nav_msgs::OdometryConstPtr & msg);
-  void objectPoseCallback(const geometry_msgs::Pose2DConstPtr & object_msg);
+  void objectPoseCallback(const geometry_msgs::Vector3StampedConstPtr & object_msg);
   bool setMotionTrigger(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
 };
 

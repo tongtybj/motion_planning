@@ -22,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 
+find_package(gazebo REQUIRED)
 find_package(Boost REQUIRED COMPONENTS random)
 
 add_subdirectory(qpOASES)
@@ -78,7 +79,7 @@ target_link_libraries (grasp_form_search_node ${catkin_LIBRARIES}  ${Boost_LIBRA
 
 # motion planner (plugin)
 add_library(grasp_motion_planning_pluginlib src/grasp_motion/whole_body.cpp)
-target_link_libraries(grasp_motion_planning_pluginlib ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(grasp_motion_planning_pluginlib ${catkin_LIBRARIES} ${Boost_LIBRARIES} grasp_form_search grasp_form_search_algorithm_pluginlib )
 
 # library of aerial transportation
 add_library(aerial_transportation src/aerial_transportation)

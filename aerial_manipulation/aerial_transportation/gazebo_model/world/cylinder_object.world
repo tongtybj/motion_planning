@@ -1,0 +1,82 @@
+<?xml version="1.0" ?>
+<sdf version='1.4'>
+  <world name='default'>
+
+    <physics type='ode'>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+      <gravity>0 0 -9.8</gravity>
+    </physics>
+
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <latitude_deg>0</latitude_deg>
+      <longitude_deg>0</longitude_deg>
+      <elevation>0</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+
+   <scene>
+      <sky>
+        <clouds>
+          <speed>12</speed>
+        </clouds>
+      </sky>
+   </scene>
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <model name="cylinder">
+      <pose>-1 0 0.0 0 0 0</pose>
+      <link name="body" >
+        <pose>0 0 0.15 0 0 0</pose>
+        <inertial>
+          <mass>1.0</mass>
+          <inertia>
+            <!-- http://answers.gazebosim.org/question/4372/the-inertia-matrix-explained/ -->
+            <ixx>0.0114</ixx>    <!-- for a box: ixx = 0.083 * mass * (3*r*r + h*h) -->
+            <ixy>0.0</ixy>         <!-- for a box: ixy = 0 -->
+            <ixz>0.0</ixz>         <!-- for a box: ixz = 0 -->
+            <iyy>0.0114</iyy>    <!-- for a box: iyy = 0.083 * mass * (3*r*r + h*h) -->
+            <iyz>0.0</iyz>         <!-- for a box: iyz = 0 -->
+            <izz>0.00078</izz>    <!-- for a box: izz = 0.5 * mass * (r*r) -->
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <length>0.3</length>
+              <radius>0.125</radius>
+            </cylinder>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <length>0.3</length>
+              <radius>0.125</radius>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0 0.0 0.0 1</ambient> <!-- tomato -->
+            <diffuse>1.00 0.38 0.28 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+            <emissive>0 0 0 0</emissive>
+          </material>
+        </visual>
+      </link>
+      <plugin name="odom" filename="libgazebo_ros_p3d.so" >
+        <topicName>object/odom</topicName>
+        <bodyName>body</bodyName>
+        <updateRate>20.0</updateRate>
+      </plugin>
+    </model>
+  </world>
+</sdf>

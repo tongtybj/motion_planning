@@ -243,7 +243,10 @@ namespace grasp_form_search
 
     /* special process for convex contact rot */
     if(object_type_ == aerial_transportation::ObjectConfigure::Request::CONVEX_POLYGONAL_COLUMN)
-      v_best_contact_rot_.at(0) = object_[best_start_side_]->contact_rot_;
+      {
+        for(int i = 0; i < contact_num_; i++)
+          v_best_contact_rot_.at(i) = object_[(best_start_side_ + i) % object_.size()]->contact_rot_;
+      }
 
     std::getline(ifs, str);
     ss[5].str(str);
@@ -462,6 +465,6 @@ namespace grasp_form_search
 
     tf::quaternionEigenToTF(v_best_contact_rot_.at(0) * AngleAxisd(v_best_phi_.at(0), Vector3d::UnitZ()), uav_root_q);
     tf_object_origin_to_uav_root.setRotation(uav_root_q);
-    br_.sendTransform(tf::StampedTransform(tf_object_origin_to_uav_root.inverse(), ros::Time::now(), link1_frame_name_, object_frame_name_));
+    br_.sendTransform(tf::StampedTransform(tf_object_origin_to_uav_root, ros::Time::now(), object_frame_name_, link1_frame_name_));
   }
 };

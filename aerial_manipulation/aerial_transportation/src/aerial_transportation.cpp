@@ -53,7 +53,7 @@ AerialTransportation::AerialTransportation(ros::NodeHandle nh, ros::NodeHandle n
       grasp_motion_planner_loader_ptr_ =  boost::shared_ptr< pluginlib::ClassLoader<grasp_motion::Base> >( new pluginlib::ClassLoader<grasp_motion::Base>("aerial_transportation", "grasp_motion::Base"));
       std::string motion_planner_plugin_name;
       std::string plugin_name;
-      nhp_.param ("grasp_motion_planner_plugin_name", plugin_name, std::string("grasp_motion_planner/whole_body"));
+      nhp_.param ("grasp_motion_planner_plugin_name", plugin_name, std::string("grasp_motion/whole_body"));
       if(verbose_) std::cout << "[aerial transportation] grasp_motion_planner_plugin_name: " << plugin_name << std::endl;
       grasp_motion_planner_ = grasp_motion_planner_loader_ptr_->createInstance(plugin_name);
       grasp_motion_planner_->initialize(nh_, nhp_, this);
@@ -71,9 +71,11 @@ AerialTransportation::AerialTransportation(ros::NodeHandle nh, ros::NodeHandle n
   uav_odom_sub_ = nh_.subscribe(topic_name, 1, &AerialTransportation::odomCallback, this);
   nhp_.param("object_pos_sub_name", topic_name, std::string("/object"));
   object_pos_sub_ = nh_.subscribe(topic_name, 1, &AerialTransportation::objectPoseCallback, this);
+  nhp_.param("set_motion_trigger_srv_name", topic_name, std::string("/start_aerial_transportation"));
+  set_motion_trigger_srv_ = nh_.advertiseService(topic_name, &AerialTransportation::setMotionTrigger, this);
 
   /* timer init */
-  nhp_.param("func_loop_rate", func_loop_rate_, 40.0);
+  nhp_.param("motion_func_loop_rate", func_loop_rate_, 40.0);
   func_timer_ = nhp_.createTimer(ros::Duration(1.0 / func_loop_rate_), &AerialTransportation::mainFunc,this);
 
 }
@@ -93,11 +95,9 @@ void AerialTransportation::rosParamInit()
   if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", approach_count: " << approach_count_ <<std::endl;
   nhp_.param("object_head_direction", object_head_direction_, false);
   if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", object_head_direction: " << object_head_direction_ <<std::endl;
-  nhp_.param("grasping_height_offset", grasping_height_offset_, -0.01);
-    if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", grasping_height_offset: " << grasping_height_offset_ <<std::endl;
   nhp_.param("falling_speed", falling_speed_, -0.04);
   if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", falling_speed: " << falling_speed_ <<std::endl;
-  nhp_.param("ascending_speed", ascending_speed_, 0.1);
+  nhp_.param("ascending_speedw", ascending_speed_, 0.1);
   if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", ascending_speed: " << ascending_speed_ <<std::endl;
   nhp_.param("transportation_threshold", transportation_threshold_, 0.1);
   if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", transportation_threshold: " << transportation_threshold_ <<std::endl;
@@ -107,17 +107,17 @@ void AerialTransportation::rosParamInit()
   if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", dropping_offset: " << dropping_offset_ <<std::endl;
 
   /* no recognition */
-  nhp_.param("object_height", object_height_, 0.2);
-  if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", object_height: " << object_height_ <<std::endl;
+  nhp_.param("grasping_height", grasping_height_, 0.2);
+  if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", grasping_height: " << grasping_height_ <<std::endl;
   /* recycle box config */
   nhp_.param("box_x", box_pos_.m_floats[0], 1.145);
-  nhp_.param("box_y", box_pos_.m_floats[0], 0.02);
-  nhp_.param("box_z", box_pos_.m_floats[0], 0.2);
-  if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", box_pos: [" << box_pos_.x() <<  box_pos_.y() <<  box_pos_.z() << "]" <<std::endl;
+  nhp_.param("box_y", box_pos_.m_floats[1], 0.02);
+  nhp_.param("box_z", box_pos_.m_floats[2], 0.2);
+  if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", box_pos: [" << box_pos_.x() << ", " <<  box_pos_.y()  << ", "<<  box_pos_.z() << "]" <<std::endl;
   nhp_.param("box_offset_x", box_offset_.m_floats[0], 0.0);
   nhp_.param("box_offset_y", box_offset_.m_floats[1], 0.0);
   nhp_.param("box_offset_z", box_offset_.m_floats[2], 0.0);
-  if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", box_offset: [" << box_offset_.x() <<  box_offset_.y() <<  box_offset_.z() << "]" <<std::endl;
+  if(verbose_) std::cout << "[aerial transportation] ns: " << ns << ", box_offset: [" << box_offset_.x() <<   ", "<< box_offset_.y() <<  ", "<<  box_offset_.z() << "]" <<std::endl;
 
 }
 
@@ -151,10 +151,15 @@ bool AerialTransportation::setMotionTrigger(std_srvs::SetBool::Request& req, std
 
       phase_ ++;
       uav_init_cog_2d_pos_ = uav_cog_2d_pos_;
-      ROS_INFO("shift to APPROACH");
+
       /* get target position only once */
       uav_target_cog_2d_pos_ = grasp_motion_planner_->getUavTargetApproach2DPos(object_2d_pos_, object_yaw_);
       uav_target_cog_yaw_ = grasp_motion_planner_->getUavTargetApproachYaw(object_yaw_);
+      /* nomalized yaw */
+      if(uav_target_cog_yaw_ > M_PI)  uav_target_cog_yaw_ -= (2 * M_PI);
+      else if(uav_target_cog_yaw_ < -M_PI)  uav_target_cog_yaw_ += (2 * M_PI);
+
+      ROS_INFO("[aerial transportation] shift to APPROACH, uav_target_cog_2d_pos: [%f, %f], uav_target_cog_yaw: %f", uav_target_cog_2d_pos_.x(), uav_target_cog_2d_pos_.y(), uav_target_cog_yaw_);
 
       res.success = false;
       res.message = std::string("start motion");
@@ -178,12 +183,13 @@ void AerialTransportation::odomCallback(const nav_msgs::OdometryConstPtr & msg)
 }
 
 /* get object 2D pose */
-void AerialTransportation::objectPoseCallback(const geometry_msgs::Pose2DConstPtr & object_msg)
+void AerialTransportation::objectPoseCallback(const geometry_msgs::Vector3StampedConstPtr & object_msg)
 {
   if(!object_found_) object_found_ = true;
 
-  object_2d_pos_.setValue(object_msg->x, object_msg->y, 0);
-  object_yaw_ = object_msg->theta;
+  object_2d_pos_.setValue(object_msg->vector.x, object_msg->vector.y, 0);
+  object_yaw_ = object_msg->vector.z;
+
 }
 
 void AerialTransportation::mainFunc(const ros::TimerEvent & e)
@@ -239,22 +245,22 @@ void AerialTransportation::mainFunc(const ros::TimerEvent & e)
       {
         /* height calc part */
         uav_target_height_ += (ascending_speed_ / func_loop_rate_);
-        if(uav_target_height_ > (box_pos_.z() + object_height_ + dropping_offset_))
-          uav_target_height_ = box_pos_.z() + object_height_ + dropping_offset_;
+        if(uav_target_height_ > box_pos_.z() + dropping_offset_)
+          uav_target_height_ = box_pos_.z() + dropping_offset_;
 
         /* send nav msg */
         aerial_robot_base::FlightNav nav_msg;
         nav_msg.header.stamp = ros::Time::now();
         nav_msg.target = aerial_robot_base::FlightNav::COG;
         nav_msg.pos_xy_nav_mode = aerial_robot_base::FlightNav::POS_MODE;
-        nav_msg.target_pos_x = box_pos_.x() + box_offset_.x();
-        nav_msg.target_pos_y = box_pos_.y() + box_offset_.y();
+        nav_msg.target_pos_x = uav_cog_2d_pos_.x();
+        nav_msg.target_pos_y = uav_cog_2d_pos_.y();
         nav_msg.pos_z_nav_mode = aerial_robot_base::FlightNav::POS_MODE;
         nav_msg.target_pos_z = uav_target_height_;
         nav_msg.psi_nav_mode = aerial_robot_base::FlightNav::NO_NAVIGATION;
         uav_nav_pub_.publish(nav_msg);
 
-        if(fabs(box_pos_.z() + object_height_ + dropping_offset_ - uav_cog_pos_.z())  < 0.05) //0.05m, hard-coding
+        if(fabs(box_pos_.z() + dropping_offset_ - uav_cog_pos_.z())  < 0.05) //0.05m, hard-coding
           {
             ROS_INFO("[aerial transportation] Shift to TRANSPORT");
             phase_++;
@@ -265,7 +271,7 @@ void AerialTransportation::mainFunc(const ros::TimerEvent & e)
     case phase::TRANSPORT:
       {
         uav_target_cog_2d_pos_ = box_pos_ + box_offset_;
-
+        uav_target_cog_2d_pos_.setZ(0);
         /* nav part */
         aerial_robot_base::FlightNav nav_msg;
         nav_msg.header.stamp = ros::Time::now();
@@ -318,6 +324,7 @@ void AerialTransportation::mainFunc(const ros::TimerEvent & e)
     default:
       {
         cnt = 0;
+        //ROS_INFO("idle");
         break;
       }
     }
@@ -327,11 +334,15 @@ bool AerialTransportation::positionConvergence(double thresh)
 {
   if(thresh == 0) thresh = approach_pos_threshold_;
 
+  //ROS_INFO("thresh: %f, uav_target_cog_2d_pos_: [%f, %f, %f] - uav_cog_2d_pos_: [%f, %f, %f]", thresh, uav_target_cog_2d_pos_.x(), uav_target_cog_2d_pos_.y(), uav_target_cog_2d_pos_.z(), uav_cog_2d_pos_.x(), uav_cog_2d_pos_.y(), uav_cog_2d_pos_.z());
+
   return ((uav_target_cog_2d_pos_ - uav_cog_2d_pos_).length() <  thresh)?true:false;
 }
 
 bool AerialTransportation::yawConvergence()
 {
+
+  //ROS_INFO("uav_target_cog_yaw_: %f, uav_cog_yaw_: %f, approach_yaw_threshold_: %f", uav_target_cog_yaw_, uav_cog_yaw_, approach_yaw_threshold_);
   if(object_head_direction_)
     return (fabs(uav_target_cog_yaw_ - uav_cog_yaw_) < approach_yaw_threshold_)?true:false;
   else
