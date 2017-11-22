@@ -14,19 +14,19 @@ search_func_loop_rate: 0.0 # no joint pub from grasp form searching method
 #nav_vel_limit: 0.3
 
 approach_pos_threshold: 0.1
-approach_yaw_threshold: 0.1
+approach_yaw_threshold: 0.15
 approach_count: 1.0
 
 falling_speed: -0.1
 ascending_speed: 0.1
-grasping_height: 0.06
+grasping_height: 0.08
 transportation_threshold: 0.15 # pos threshold to the box
 transportation_count: 2.0
 dropping_offset: 0.3
 
 # red box
-box_x: 1.005
-box_y: 0.443
+box_x: 0.540
+box_y: 0.32
 box_z: 0.3
 
 

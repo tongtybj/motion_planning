@@ -126,6 +126,7 @@ namespace roll_motion
 
       if(target_torque == 0)
         {
+          //ROS_INFO("current_torque_: %f, grasp_min_torque_: %f", current_torque_, grasp_min_torque_);
           if(current_torque_ < grasp_min_torque_)
             {
               target_angle_ += rough_grasping_delta_angle_;
@@ -144,6 +145,7 @@ namespace roll_motion
           if(current_torque_ < target_torque -  torque_grasp_threshold_  &&
              ros::Time::now().toSec() - modification_start_time_ > angle_control_idle_duration_)
                 {
+                  //ROS_INFO("lack"); //nenetti
                   target_angle_ += torque_grasping_delta_angle_;
                   modification_start_time_ = ros::Time::now().toSec();
                   grasping_start_time_ = ros::Time::now().toSec();
@@ -152,7 +154,8 @@ namespace roll_motion
           else if(current_torque_ > target_torque + torque_grasp_threshold_  &&
              ros::Time::now().toSec() - modification_start_time_ > angle_control_idle_duration_)
             {
-              target_angle_ += torque_grasping_delta_angle_;
+              //ROS_INFO("exceed"); //nenetti
+              target_angle_ -= torque_grasping_delta_angle_;
               modification_start_time_ = ros::Time::now().toSec();
               grasping_start_time_ = ros::Time::now().toSec();
               return false;
@@ -160,7 +163,10 @@ namespace roll_motion
           else
             {
               if(ros::Time::now().toSec() - grasping_start_time_ > grasping_duration_)
-                return true;
+                {
+                  //ROS_INFO("force-closure"); //nenetti
+                  return true;
+                }
             }
         }
 

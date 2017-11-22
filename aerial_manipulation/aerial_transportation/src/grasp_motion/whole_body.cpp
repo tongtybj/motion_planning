@@ -126,10 +126,15 @@ namespace grasp_motion
     rolling_motion_test_contact_d = grasp_form_search_method_->getBestContactD().at(baselink_) + test_rolling_d;
     if(rolling_motion_test)
       {
-        phase =grasp_motion::ROLL;
+        phase =grasp_motion::GRASP;
         transportator_->phase_ = phase::GRASPING;
       }
 
+    /* nenetti test */
+    //phase =grasp_motion::ROLL;
+    //transportator_->phase_ = phase::GRASPING;
+    //for(auto itr = joints_.begin(); itr != joints_.end(); ++itr)
+    //itr->grasping(0, true);
 
     /* ros pub sub init */
     std::string topic_name;
@@ -299,15 +304,34 @@ namespace grasp_motion
       case grasp_motion::ROLL:
         {
           //aoba
-          phase++;
-          return false;
+          //phase++;
+          //return false;
 
           rollMotion();
           return false;
         }
       case grasp_motion::GRASP:
         {
+          /* nenetti test */
+          ///////////////////////
+
+          ROS_INFO( "joint1: [%f, %f, %d, %f], joint2: [%f, %f, %d, %f], joint3: [%f, %f, %d, %f]", joints_.at(0).current_angle_, joints_.at(0).current_torque_, joints_.at(0).error_, joints_.at(0).target_angle_, joints_.at(1).current_angle_, joints_.at(1).current_torque_, joints_.at(1).error_, joints_.at(1).target_angle_, joints_.at(2).current_angle_, joints_.at(2).current_torque_, joints_.at(2).error_, joints_.at(2).target_angle_);
           int max_level = (baselink_ < uav_kinematics_->getRotorNum() - 1 - baselink_)?uav_kinematics_->getRotorNum() - 1 - baselink_: baselink_;
+          /*
+          if(joints_.at(2).grasping())
+            {
+              joints_.at(2).grasping(250);
+              ROS_WARN("grasp!!");
+            }
+          else ROS_INFO("not grasp");
+          sensor_msgs::JointState joint_ctrl_msg2;
+          joint_ctrl_msg2.header.stamp = ros::Time::now();
+          for(auto itr = joints_.begin(); itr != joints_.end(); ++itr)
+            joint_ctrl_msg2.position.push_back(itr->getTargetAngle());
+          joint_ctrl_pub_.publish(joint_ctrl_msg2);
+          */
+          //return false;
+          ///////////////////////
 
           /* check the rough grasping */
           bool current_level_rough_grasp_flag = true;
@@ -320,7 +344,7 @@ namespace grasp_motion
             }
 
           /* shift to next level */
-          if(current_level_rough_grasp_flag)
+          if(current_level_rough_grasp_flag && grasping_level < max_level)
             {
               /* initizalize */
               grasping_level ++;
@@ -336,19 +360,25 @@ namespace grasp_motion
             {
               for(int i = 0; i < joints_.size(); i ++)
                 force_closure &= joints_.at(i).grasping(v_grasp_torque(i));
+              ROS_ERROR("force_closure: %d, target_torque: %f, %f, %f", force_closure, v_grasp_torque(0), v_grasp_torque(1), v_grasp_torque(2));
             }
           else force_closure = false;
 
+
+
           //aoba
+          /*
           force_closure = true;
           sensor_msgs::JointState joint_ctrl_msg2;
           joint_ctrl_msg2.header.stamp = ros::Time::now();
           for(auto itr = joints_.begin(); itr != joints_.end(); ++itr)
             joint_ctrl_msg2.position.push_back(M_PI/2);
           joint_ctrl_pub_.publish(joint_ctrl_msg2);
+          */
 
           if(force_closure)
             {
+              ROS_ERROR("force-closure!!!!!!!!!!!");
               /* 1. add extra module: nominal */
               tf::Transform tf_object_origin_to_uav_root;
               tf::Vector3 uav_root_origin;
@@ -454,11 +484,20 @@ namespace grasp_motion
   void WholeBody::jointStatesCallback(const sensor_msgs::JointStateConstPtr& joint_states_msg)
   {
     assert(joint_states_msg->position.size() == uav_kinematics_->getRotorNum() - 1);
-
     uav_kinematics_->kinematics(*joint_states_msg);
 
     for(int i = 0; i < joint_states_msg->position.size(); i++)
-      joints_.at(i).current_angle_ = joint_states_msg->position[i];
+      {
+        joints_.at(i).current_angle_ = joint_states_msg->position[i];
+
+        /* nenetti */
+        // if(once_flag)
+        //   {
+        //     joints_.at(i).target_angle_ = joints_.at(i).current_angle_;
+        //}
+      }
+    /* nenetti */
+    //once_flag = false;
   }
 
   void WholeBody::jointMotorStatusCallback(const dynamixel_msgs::MotorStateListConstPtr& joint_motors_msg)
@@ -582,7 +621,6 @@ namespace grasp_motion
 
         if(debug_verbose_)
           ROS_INFO("[hydrus grasp motion] polygon rolling motion, baselink_contact_p: [%f, %f, %f], vertex_p: [%f, %f, %f], contact_phi: %f, contact_d: %f, best_contact_phi: %f, best_contact_d: %f, uav_target_cog_acc: [%f, %f]", baselink_contact_p.x(), baselink_contact_p.y(), baselink_contact_p.z(), baselink_vertex_p.x(), baselink_vertex_p.y(), baselink_vertex_p.z(), baselink_contact_phi, baselink_contact_d, grasp_form_search_method_->getBestPhi().at(baselink_), grasp_form_search_method_->getBestContactD().at(baselink_), uav_target_cog_acc.x(), uav_target_cog_acc.y());
-
       }
     if(object_type  == CYLINDER)
       {
@@ -601,7 +639,6 @@ namespace grasp_motion
     auto contactPointValid = [&]() -> bool {
       if(baselink_contact_phi >= baselink_valid_lower_phi && baselink_contact_phi <= baselink_valid_upper_phi)
         {
-          return false;
           if(object_type == CONVEX_POLYGONAL_COLUMN)
             {
               if(baselink_contact_d >= baselink_valid_lower_contact_d && baselink_contact_d <= baselink_valid_upper_contact_d)
@@ -662,6 +699,9 @@ namespace grasp_motion
         {
           if(!contactPointValid())
             {
+              //nenetti
+              return false;
+
               transportator_->uav_target_cog_yaw_ = transportator_->uav_cog_yaw_ + rollingAngleCalc();
               /* nomalized yaw */
               if(transportator_->uav_target_cog_yaw_ > M_PI)  transportator_->uav_target_cog_yaw_ -= (2 * M_PI);

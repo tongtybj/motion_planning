@@ -3,11 +3,6 @@
   <arg name="object" default="convex" />
   <arg name="headless" default="False" />
 
-  <include file="$(find aerial_transportation)/launch/test_object.launch" >
-    <arg name="object" default="$(arg object)" />
-    <arg name ="only_pub" default="true" />
-  </include>
-
   <!-- robot: hydrus -->
   <include file="$(find hydrus)/launch/hydrusx/hydrusx_bringup.launch" >
     <arg name="real_machine" value="False" />

@@ -10,12 +10,9 @@
     <param name="searching_file_name" value = "$(find aerial_transportation)/log/searching_result_$(arg object).txt"/>
   </node>
 
-  <!--
-  <node pkg="aerial_transportation" name="object_visualization" type="object_visualization" output="screen" if="$(arg ground_truth)">
-    <param name = "obj_marker_pub_name" value = "obj_ground_truth_marker" />
-    <param name = "uav_state_sub_name" value = "/uav/baselink/odom" />
-    <param name = "object_pos_sub_name" value = "/object" />
-    <param name = "link_name" value = "link3" />
-  </node>
-  -->
+  <include file="$(find aerial_transportation)/launch/test_object.launch" >
+    <arg name="object" default="$(arg object)" />
+    <arg name ="only_pub" default="true" />
+  </include>
+
 </launch>
