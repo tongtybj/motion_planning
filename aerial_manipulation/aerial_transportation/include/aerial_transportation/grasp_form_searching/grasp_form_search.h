@@ -146,7 +146,13 @@ namespace grasp_form_search
       v_best_min_f_fc_ = v_best_min_f_fc;
       v_best_tau_ = v_best_tau;
       v_best_hover_thrust_ = v_best_hover_thrust;
+
+      /* special process for cylinder */
+      assert(v_best_contact_p_.size() == object_.size());
+      for(int i = 0; i < v_best_contact_p_.size(); i++)
+        object_.at(i)->psi_ = atan2(v_best_contact_p_.at(i)(1), v_best_contact_p_.at(i)(0));
     }
+
     void setBestContactDVector(std::vector<double> v_best_contact_d, std::vector<double> v_valid_lower_bound_contact_d, std::vector<double> v_valid_upper_bound_contact_d)
     {
       v_best_contact_d_ = v_best_contact_d;

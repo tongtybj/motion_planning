@@ -61,31 +61,32 @@
 
 namespace grasp_motion
 {
-  enum grasp
+  enum grasp_phase
     {
       IDLE,
       TRANSFORM,
       DESCEND,
       CONTACT,
+      ROLL,
       GRASP,
-
     };
-namespace contact_status
+
+namespace roll_motion
 {
   enum phase
     {
-      NO,
-      BASELINK,
-      NEIGHBOUR,
-      BOTH,
+      IDLE,
+      BASELINK_ROLL,
+      FULL_CONTACT,
+      NEIGHBOUR_ROLL,
     };
 };
 
   class JointHandle
   {
   public:
-    JointHandle(ros::NodeHandle nh, ros::NodeHandle nhp, int id):
-      id_(id)
+    JointHandle(ros::NodeHandle nh, ros::NodeHandle nhp, double grasp_angle, int id):
+      grasp_angle_(grasp_angle), target_angle_(grasp_angle), id_(id)
     {
       bool verbose;
       std::string ns = nhp.getNamespace();
@@ -94,18 +95,23 @@ namespace contact_status
       if(verbose) std::cout << "[hydrus grasp motion] ns: " << ns << ", grasp_min_torque: " << grasp_min_torque_ <<std::endl;
       nhp.param("grasp_max_torque", grasp_max_torque_, 0.5); //50%
       if(verbose) std::cout << "[hydrus grasp motion] ns: " << ns << ", grasp_max_torque: " << grasp_max_torque_ <<std::endl;
+
       nhp.param("grasping_duration", grasping_duration_, 1.0);
       if(verbose) std::cout << "[hydrus grasp motion] ns: " << ns << ", grasping_duration: " << grasping_duration_ <<std::endl;
       nhp.param("angle_control_idle_duration", angle_control_idle_duration_, 0.5);
       if(verbose) std::cout << "[hydrus grasp motion] ns: " << ns << ", angle_control_idle_duration: " << angle_control_idle_duration_ <<std::endl;
       nhp.param("overload_check_duration", overload_check_duration_, 0.5);
       if(verbose) std::cout << "[hydrus grasp motion] ns: " << ns << ", overload_check_duration: " << overload_check_duration_ <<std::endl;
+      nhp.param("approach_delta_angle", approach_delta_angle_, -0.45); // about 25deg
+      if(verbose) std::cout << "[hydrus grasp motion] ns: " << ns << ", approach_delta_angle: " << approach_delta_angle_ <<std::endl;
       nhp.param("rough_grasping_delta_angle", rough_grasping_delta_angle_, 0.015);
       if(verbose) std::cout << "[hydrus grasp motion] ns: " << ns << ", rough_grasping_delta_angle: " << rough_grasping_delta_angle_ <<std::endl;
       nhp.param("torque_grasping_delta_angle", torque_grasping_delta_angle_, 0.015);
       if(verbose) std::cout << "[hydrus grasp motion] ns: " << ns << ", torque_grasping_delta_angle: " << torque_grasping_delta_angle_ <<std::endl;
       nhp.param("torque_grasp_threshold", torque_grasp_threshold_, 0.1);
       if(verbose) std::cout << "[hydrus grasp motion] ns: " << ns << ", torque_grasp_threshold: " << torque_grasp_threshold_ <<std::endl;
+
+      approach_angle_ = grasp_angle_ + approach_delta_angle_;
     }
     ~JointHandle(){}
 
@@ -173,8 +179,7 @@ namespace contact_status
         }
     }
 
-    inline const double getTargetAngle() const {return target_angle_;}
-    void setTargetAngle(double target_angle) {target_angle_ = target_angle;}
+    void approaching() { target_angle_ = approach_angle_; }
 
     bool convergence()
     {
@@ -182,6 +187,7 @@ namespace contact_status
       if(fabs(target_angle_ - current_angle_) < 0.05) return true;
       else return false;
     }
+    inline const double getTargetAngle() const {return target_angle_;}
 
     int id_;
     double grasping_start_time_; //the start time to grasp object
@@ -190,6 +196,9 @@ namespace contact_status
 
     double target_angle_;
     double current_angle_;
+    double grasp_angle_;
+    double approach_angle_; //the approach angle to the object
+    double grasp_delta_angle_;
     double current_torque_;
     //int holding_rotation_direction_; //the rotation direction for grasping
     bool moving_;
@@ -197,6 +206,7 @@ namespace contact_status
     int error_; //reserve
 
     /* rosparam */
+    double approach_delta_angle_; //the incerease angle to approach the object
     double rough_grasping_delta_angle_; //the grasping angle to grasp
     double torque_grasping_delta_angle_;  //the tighten angle to force-closure the object
     double angle_control_idle_duration_; // idle duration to control joint angle for tighten/release
@@ -205,6 +215,8 @@ namespace contact_status
     double grasping_duration_; //the hold ok time count
     double grasp_min_torque_; // guarantee force-closure
     double grasp_max_torque_; // avoid overload
+
+    bool rolling_motion_test_;
   };
 
   class WholeBody :public grasp_motion::Base
@@ -215,13 +227,16 @@ namespace contact_status
 
     void initialize(ros::NodeHandle nh, ros::NodeHandle nhp, AerialTransportation* transportator) override;
 
+
     static constexpr uint8_t OVERLOAD_FLAG = 0x20;
 
     /* overwrite */
-    tf::Vector3 getUavTargetApproach2DPos() override;
-    double getUavTargetApproachYaw() override;
+    tf::Vector3 getUavTargetApproach2DPos(tf::Vector3 object_2d_pos, double objecy_yaw) override;
+    double getUavTargetApproachYaw(double object_yaw) override;
     bool grasp() override;
     bool drop() override;
+
+    bool rollMotion();
 
   private:
     /* ros publisher & subscirber */
@@ -239,39 +254,29 @@ namespace contact_status
     /* base variable */
     bool verbose_;
     bool debug_verbose_;
+    int phase_; // sub pahse for GRASPPING_PAHSE
     std::vector<grasp_motion::JointHandle> joints_;
 
     int baselink_;
-    double approach_delta_angle_; //the incerease angle to approach the object
     double approach_offset_dist_; //the distance between uav and object in the approaching phase.
     double pose_fixed_count_; //the convergence duration (sec)
-    double full_contact_count_; //the convergence duration (sec)
     double grasping_height_threshold_; //the height condition to grasp to object
 
+    double approach_acc_tilt_angle_;
     double contact_tilt_angle_;
-    double contact_dist_threshold_;
-    double contact_rolling_yaw_angle_;
+    double contact_vel_threshold_;
+    double rolling_angle_threshold_;
+    double rolling_yaw_threshold_;
+
     double default_yaw_p_gain_;
-    double contact_yaw_p_gain_;
+    double rolling_yaw_p_gain_;
 
     /* base function */
-    tf::Vector3 getRotorOriginInWordFrame(int index)
+    tf::Vector3 getBaseLinkRotorOrigin()
     {
-      tf::Vector3 cog2rotor;
-      tf::vectorEigenToTF(uav_kinematics_->getRotorsOriginFromCog().at(index), cog2rotor);
-      return transportator_->getUavCog2dTransform() * cog2rotor;
-    }
-
-    tf::Transform getContactFrame(int index)
-    {
-      tf::Vector3 contact_p;
-      tf::vectorEigenToTF(grasp_form_search_method_->getBestContactP().at(index), contact_p);
-
-      tf::Quaternion contact_rot;
-      tf::quaternionEigenToTF(grasp_form_search_method_->getBestContactRot().at(index), contact_rot); //cylinder: rot = E
-      //ROS_INFO("contact_p%d  in object frame: [%f, %f, %f], yaw: %f", index + 1, contact_p.x(), contact.y(), contact_p.z(), tf::getYaw(contact_rot));
-
-      return tf::Transform(contact_rot, contact_p);
+      tf::Vector3 cog2baselink_rotor;
+      tf::vectorEigenToTF(uav_kinematics_->getRotorsOriginFromCog().at(baselink_), cog2baselink_rotor);
+      return transportator_->getUavCogTransform() * cog2baselink_rotor;
     }
 
     void rosParamInit() override;
@@ -280,8 +285,6 @@ namespace contact_status
     void jointMotorStatusCallback(const dynamixel_msgs::MotorStateListConstPtr& joint_motors_msg); //get the torque load nad temprature from each joint
 
     void sendControlGain(double gain);
-
-    void getContactStatus(int& contact_status, double& baselink_dist, double& neighbour_dist);
   };
 };
 #endif

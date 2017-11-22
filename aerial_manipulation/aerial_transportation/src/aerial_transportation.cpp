@@ -153,8 +153,8 @@ bool AerialTransportation::setMotionTrigger(std_srvs::SetBool::Request& req, std
       uav_init_cog_2d_pos_ = uav_cog_2d_pos_;
 
       /* get target position only once */
-      uav_target_cog_2d_pos_ = grasp_motion_planner_->getUavTargetApproach2DPos(object_2d_pos_, object_yaw_);
-      uav_target_cog_yaw_ = grasp_motion_planner_->getUavTargetApproachYaw(object_yaw_);
+      uav_target_cog_2d_pos_ = grasp_motion_planner_->getUavTargetApproach2DPos();
+      uav_target_cog_yaw_ = grasp_motion_planner_->getUavTargetApproachYaw();
       /* nomalized yaw */
       if(uav_target_cog_yaw_ > M_PI)  uav_target_cog_yaw_ -= (2 * M_PI);
       else if(uav_target_cog_yaw_ < -M_PI)  uav_target_cog_yaw_ += (2 * M_PI);

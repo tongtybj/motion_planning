@@ -64,25 +64,12 @@ namespace grasp_motion
 
     virtual ~Base() {}
 
-    virtual tf::Vector3 getUavTargetApproach2DPos(tf::Vector3 object_2d_pos, double objecy_yaw)
-    {
-      return object_2d_pos;
-    }
+    virtual tf::Vector3 getUavTargetApproach2DPos() = 0;
+    virtual double getUavTargetApproachYaw() = 0;
 
-    virtual double getUavTargetApproachYaw(double object_yaw)
-    {
-      return object_yaw;
-    }
+    virtual bool grasp() { return true;}
 
-    virtual bool grasp()
-    {
-      return true;
-    }
-
-    virtual bool drop()
-    {
-      return true;
-    }
+    virtual bool drop() { return true; }
 
   protected:
     /* ros node */

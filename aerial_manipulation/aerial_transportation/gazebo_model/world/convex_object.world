@@ -34,7 +34,7 @@
     </include>
 
     <model name="convex">
-      <pose>-1.0 0 0.0 0 0 0.0</pose>
+      <pose>-1.0 0 0.0 0 0 0.785</pose>
       <link name="body" >
         <pose>0 0 0.15 0 0 0</pose>
         <inertial>
@@ -69,6 +69,14 @@
             <emissive>0 0 0 0</emissive>
           </material>
         </visual>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.8</mu>
+              <mu2>0.8</mu2>
+            </ode>
+          </friction>
+        </surface>
       </link>
       <plugin name="odom" filename="libgazebo_ros_p3d.so" >
         <topicName>object/odom</topicName>

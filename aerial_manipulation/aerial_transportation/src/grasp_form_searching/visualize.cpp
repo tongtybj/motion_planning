@@ -259,6 +259,13 @@ namespace grasp_form_search
         ss_tmp.str(str);
         ss_tmp >> v_best_contact_p_.at(i)(0) >> v_best_contact_p_.at(i)(1);
         ROS_INFO("[%f, %f]", v_best_contact_p_.at(i)(0), v_best_contact_p_.at(i)(1));
+
+        if(object_type_ == aerial_transportation::ObjectConfigure::Request::CYLINDER)
+          {
+            object_.push_back(VertexHandlePtr(new VertexHandle()));
+            object_.at(i)->psi_ = atan2(v_best_contact_p_.at(i)(1), v_best_contact_p_.at(i)(0));
+            ROS_INFO("[cylinder]: contact:%d, psi: %f", i, object_.at(i)->psi_);
+          }
       }
 
     std::getline(ifs, str);

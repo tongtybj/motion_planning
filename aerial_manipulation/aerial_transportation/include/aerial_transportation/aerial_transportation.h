@@ -122,12 +122,12 @@ public:
   tf::Vector3 box_pos_; // in cheat mode, this is obtained by rosparam
   tf::Vector3 box_offset_; // in cheat mode, this is obtained by rosparam
 
-  tf::Transform getUavCogTransform()
+  tf::Transform getUavCog2dTransform()
   {
     return tf::Transform(tf::Matrix3x3(tf::createQuaternionFromYaw(uav_cog_yaw_)), uav_cog_2d_pos_);
   }
 
-  tf::Transform getObjectTransform()
+  tf::Transform getObject2dTransform()
   {
     return tf::Transform(tf::Matrix3x3(tf::createQuaternionFromYaw(object_yaw_)), object_2d_pos_);
   }
