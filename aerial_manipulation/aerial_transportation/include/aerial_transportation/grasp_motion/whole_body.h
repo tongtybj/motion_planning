@@ -85,7 +85,7 @@ namespace contact_status
   {
   public:
     JointHandle(ros::NodeHandle nh, ros::NodeHandle nhp, int id):
-      id_(id)
+      id_(id), target_angle_(0), current_angle_(0), current_torque_(0), init_flag_(false)
     {
       bool verbose;
       std::string ns = nhp.getNamespace();
@@ -183,6 +183,7 @@ namespace contact_status
       else return false;
     }
 
+    bool init_flag_;
     int id_;
     double grasping_start_time_; //the start time to grasp object
     double overload_start_time_; //the start time to modification the grasp

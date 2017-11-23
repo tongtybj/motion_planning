@@ -19,7 +19,7 @@ approach_count: 1.0
 
 falling_speed: -0.1
 ascending_speed: 0.1
-grasping_height: 0.08
+grasping_height: 0.06
 transportation_threshold: 0.15 # pos threshold to the box
 transportation_count: 2.0
 dropping_offset: 0.3

@@ -238,6 +238,7 @@ void AerialTransportation::mainFunc(const ros::TimerEvent & e)
             phase_++;
             cnt = 0;
             uav_target_height_ = uav_cog_pos_.z();
+            uav_target_cog_2d_pos_ = uav_cog_2d_pos_;
           }
         break;
       }
@@ -253,8 +254,8 @@ void AerialTransportation::mainFunc(const ros::TimerEvent & e)
         nav_msg.header.stamp = ros::Time::now();
         nav_msg.target = aerial_robot_base::FlightNav::COG;
         nav_msg.pos_xy_nav_mode = aerial_robot_base::FlightNav::POS_MODE;
-        nav_msg.target_pos_x = uav_cog_2d_pos_.x();
-        nav_msg.target_pos_y = uav_cog_2d_pos_.y();
+        nav_msg.target_pos_x = uav_target_cog_2d_pos_.x();
+        nav_msg.target_pos_y = uav_target_cog_2d_pos_.y();
         nav_msg.pos_z_nav_mode = aerial_robot_base::FlightNav::POS_MODE;
         nav_msg.target_pos_z = uav_target_height_;
         nav_msg.psi_nav_mode = aerial_robot_base::FlightNav::NO_NAVIGATION;
@@ -318,13 +319,12 @@ void AerialTransportation::mainFunc(const ros::TimerEvent & e)
         uav_nav_pub_.publish(nav_msg);
 
         phase_ = phase::IDLE;
-        ROS_INFO("Return, and set phase to IDLE");
+        ROS_INFO("[aerial transportation] Return, and set phase to IDLE");
         break;
       }
     default:
       {
         cnt = 0;
-        //ROS_INFO("idle");
         break;
       }
     }
@@ -339,12 +339,13 @@ bool AerialTransportation::positionConvergence(double thresh)
   return ((uav_target_cog_2d_pos_ - uav_cog_2d_pos_).length() <  thresh)?true:false;
 }
 
-bool AerialTransportation::yawConvergence()
+bool AerialTransportation::yawConvergence(bool relax)
 {
+  double approach_yaw_threshold = (relax)? 2* approach_yaw_threshold_:approach_yaw_threshold_;
 
   //ROS_INFO("uav_target_cog_yaw_: %f, uav_cog_yaw_: %f, approach_yaw_threshold_: %f", uav_target_cog_yaw_, uav_cog_yaw_, approach_yaw_threshold_);
   if(object_head_direction_)
-    return (fabs(uav_target_cog_yaw_ - uav_cog_yaw_) < approach_yaw_threshold_)?true:false;
+    return (fabs(uav_target_cog_yaw_ - uav_cog_yaw_) < approach_yaw_threshold)?true:false;
   else
     return true;
 }

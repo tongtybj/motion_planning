@@ -82,7 +82,7 @@ public:
   ros::Publisher uav_nav_pub_;
 
   bool positionConvergence(double thresh = 0);
-  bool yawConvergence();
+  bool yawConvergence(bool relax = false);
 
   /* not good, but can be easy to access from grasp motion planner */
   double approach_pos_threshold_; // the pos convergence posecondition for object approach

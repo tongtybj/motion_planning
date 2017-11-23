@@ -112,10 +112,8 @@ namespace grasp_motion
     if(v_grasp_torque.maxCoeff() > joints_.at(0).grasp_max_torque_) ROS_FATAL("the grasp max torque %f exceed the valid value %f, the min is %f ", v_grasp_torque.maxCoeff(), joints_.at(0).grasp_max_torque_, v_grasp_torque.minCoeff());
 
     /* nenetti test */
-    //phase =grasp_motion::ROLL;
+    //grasp_phase = grasp_motion::GRASP;
     //transportator_->phase_ = phase::GRASPING;
-    //for(auto itr = joints_.begin(); itr != joints_.end(); ++itr)
-    //itr->grasping(0, true);
 
     /* ros pub sub init */
     std::string topic_name;
@@ -204,7 +202,7 @@ namespace grasp_motion
           for(auto itr = joints_.begin(); itr != joints_.end(); ++itr)
             pose_fixed_flag &= itr->convergence();
 
-          if(pose_fixed_flag && transportator_->positionConvergence() && transportator_->yawConvergence())
+          if(pose_fixed_flag && transportator_->positionConvergence() && transportator_->yawConvergence(true))
             {
               if(++cnt > (pose_fixed_count_ * transportator_->func_loop_rate_))
                 {
@@ -274,7 +272,7 @@ namespace grasp_motion
                   if(baselink_contact_phi > M_PI) baselink_contact_phi -= 2*M_PI;
                   if(baselink_contact_phi <-M_PI) baselink_contact_phi += 2*M_PI;
 
-                  //ROS_WARN("baselink_contact_phi: %f, lower bound: %f, upper bound: %f", baselink_contact_phi, grasp_form_search_method_->getValidLowerBoundPhi().at(baselink_), grasp_form_search_method_->getValidUpperBoundPhi().at(baselink_));
+                  ROS_WARN("baselink_contact_phi: %f, lower bound: %f, upper bound: %f", baselink_contact_phi, grasp_form_search_method_->getValidLowerBoundPhi().at(baselink_), grasp_form_search_method_->getValidUpperBoundPhi().at(baselink_));
                   if(grasp_form_search_method_->getValidLowerBoundPhi().at(baselink_) < baselink_contact_phi && baselink_contact_phi < grasp_form_search_method_->getValidUpperBoundPhi().at(baselink_))
                     {
                       //ROS_ERROR("convergent");
@@ -365,9 +363,10 @@ namespace grasp_motion
         }
       case grasp_motion::GRASP:
         {
-          /* nenetti test */
-          ///////////////////////
+          for(int i = 0; i < joints_.size(); i++)
+            if(!joints_.at(i).init_flag_) return false;
 
+          /* nenetti test */
           ROS_INFO( "[hydrus grasp motion]: grasp: joint1: [%f, %f, %d, %f], joint2: [%f, %f, %d, %f], joint3: [%f, %f, %d, %f]", joints_.at(0).current_angle_, joints_.at(0).current_torque_, joints_.at(0).error_, joints_.at(0).target_angle_, joints_.at(1).current_angle_, joints_.at(1).current_torque_, joints_.at(1).error_, joints_.at(1).target_angle_, joints_.at(2).current_angle_, joints_.at(2).current_torque_, joints_.at(2).error_, joints_.at(2).target_angle_);
           int max_level = (baselink_ < uav_kinematics_->getRotorNum() - 1 - baselink_)?uav_kinematics_->getRotorNum() - 1 - baselink_: baselink_;
           /*
@@ -390,7 +389,7 @@ namespace grasp_motion
           bool current_level_rough_grasp_flag = true;
           for(int level = 0; level <= grasping_level; level++)
             {
-              if (center_joint - level > 0)
+              if (center_joint - level >= 0)
                 current_level_rough_grasp_flag &= joints_.at(center_joint - level).grasping();
               if (center_joint + level < uav_kinematics_->getRotorNum() - 1 && level != 0)
                 current_level_rough_grasp_flag &= joints_.at(center_joint + level).grasping();
@@ -399,12 +398,20 @@ namespace grasp_motion
           /* shift to next level */
           if(current_level_rough_grasp_flag && grasping_level < max_level)
             {
+              ROS_WARN("grasping: level up");
+
               /* initizalize */
               grasping_level ++;
-              if (center_joint - grasping_level > 0)
-                joints_.at(center_joint - grasping_level).grasping(0, true);
+              if (center_joint - grasping_level >= 0)
+                {
+                  joints_.at(center_joint - grasping_level).setTargetAngle(joints_.at(center_joint - grasping_level).current_angle_);
+                  joints_.at(center_joint - grasping_level).grasping(0, true);
+                }
               if (center_joint + grasping_level < uav_kinematics_->getRotorNum() - 1 && grasping_level != 0)
-                joints_.at(center_joint + grasping_level).grasping(0, true);
+                {
+                  joints_.at(center_joint + grasping_level).setTargetAngle(joints_.at(center_joint + grasping_level).current_angle_);
+                  joints_.at(center_joint + grasping_level).grasping(0, true);
+                }
             }
 
           /* check torque based grasp */
@@ -418,13 +425,12 @@ namespace grasp_motion
           else force_closure = false;
 
           //aoba
-          force_closure = true;
-          sensor_msgs::JointState joint_ctrl_msg2;
-          joint_ctrl_msg2.header.stamp = ros::Time::now();
-          for(auto itr = joints_.begin(); itr != joints_.end(); ++itr)
-            joint_ctrl_msg2.position.push_back(M_PI/2);
-          joint_ctrl_pub_.publish(joint_ctrl_msg2);
-
+          // force_closure = true;
+          // sensor_msgs::JointState joint_ctrl_msg2;
+          // joint_ctrl_msg2.header.stamp = ros::Time::now();
+          // for(auto itr = joints_.begin(); itr != joints_.end(); ++itr)
+          //   joint_ctrl_msg2.position.push_back(M_PI/2);
+          // joint_ctrl_pub_.publish(joint_ctrl_msg2);
 
           if(force_closure)
             {
@@ -540,14 +546,12 @@ namespace grasp_motion
       {
         joints_.at(i).current_angle_ = joint_states_msg->position[i];
 
-        /* nenetti */
-        // if(once_flag)
-        //   {
-        //     joints_.at(i).target_angle_ = joints_.at(i).current_angle_;
-        //}
+        if(!joints_.at(i).init_flag_)
+          {
+            joints_.at(i).init_flag_ = true;
+            joints_.at(i).target_angle_ = joint_states_msg->position[i];
+          }
       }
-    /* nenetti */
-    //once_flag = false;
   }
 
   void WholeBody::jointMotorStatusCallback(const dynamixel_msgs::MotorStateListConstPtr& joint_motors_msg)
