@@ -20,15 +20,15 @@ object_head_direction: true
 grasp_motion_planner_plugin_name: grasp_motion/whole_body
 
 approach_delta_angle: -0.6
-approach_offset_dist: 0.22 #cylinder: 0.15 ok, convex: > 0.15 * sqrt(2)
+approach_offset_dist: 0.22 #convex: 0.22 > 0.15 * sqrt(2)
 
-pose_fixed_count: 1.0
-full_contact_count: 0.5
+pose_fixed_count: 0.5 # convex: 1.0; cylinder: 0.5
+full_contact_count: 3.0 # convex: 0.5; cylinder: 3.0
 
 grasping_height_threshold: 0.01
 
-contact_tilt_angle: 0.034
-contact_dist_threshold: 0.03
+contact_tilt_angle: 0.02 # convex: 0.034; cylinder: 0.02
+contact_dist_threshold: 0.025 #convex: 0.03; cylinder: 0.025
 contact_rolling_yaw_angle: 0.1
 rolling_angle_threshold: 0.1
 rolling_yaw_threshold: 0.1
