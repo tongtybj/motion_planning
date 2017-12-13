@@ -115,6 +115,10 @@ namespace grasp_motion
     //grasp_phase = grasp_motion::GRASP;
     //transportator_->phase_ = phase::GRASPING;
 
+    /* rqt_plot debug */
+    grasp_phase = grasp_motion::CONTACT;
+    transportator_->phase_ = phase::GRASPING;
+
     /* ros pub sub init */
     std::string topic_name;
     nhp_.param("joint_ctrl_pub_name", topic_name, std::string("/hydrus/joints_ctrl"));
@@ -129,6 +133,10 @@ namespace grasp_motion
     nhp_.param("control_gain_cmd_srv_name", topic_name, std::string("/hydrusx/set_parameters"));
     control_gain_client_ = nh_.serviceClient<dynamic_reconfigure::Reconfigure>(topic_name);
     sendControlGain(default_yaw_p_gain_);
+
+    /* debug */
+    joint_motors_pub_ = nh_.advertise<dynamixel_msgs::MotorStateList>("/joint_motors/debug", 1);
+    contact_state_pub_ = nh_.advertise<geometry_msgs::Vector3>("/contact_state/debug", 1);
   }
 
   void WholeBody::rosParamInit()
@@ -250,9 +258,24 @@ namespace grasp_motion
           bool full_contact = false;
           getContactStatus(contact_status, baselink_dist, neighbour_dist);
 
+          /* rqt_plot debug */
+          geometry_msgs::Vector3 contact_state_msg;
+          contact_state_msg.x = baselink_dist;
+          contact_state_msg.y = neighbour_dist;
+
           if(object_type == CONVEX_POLYGONAL_COLUMN)
             {
               tf::Vector3 baselink_acc_direct, neighbour_acc_direct;
+
+              tf::Quaternion baselink_contact_rot(0, 0, 0, 1);
+              tf::quaternionEigenToTF(grasp_form_search_method_->getBestContactRot().at(baselink_), baselink_contact_rot);
+              double baselink_contact_phi = transportator_->uav_cog_yaw_ - (tf::getYaw(baselink_contact_rot) + transportator_->object_yaw_);
+              if(baselink_contact_phi > M_PI) baselink_contact_phi -= 2*M_PI;
+              if(baselink_contact_phi <-M_PI) baselink_contact_phi += 2*M_PI;
+
+              /* rqt_plot debug */
+              contact_state_msg.z = baselink_contact_phi;
+
               if(baselink_ < neighbour_link)
                 {
                   baselink_acc_direct = transportator_->getObject2dTransform().getBasis() * getContactFrame(neighbour_link).getBasis() * tf::Vector3(1, 0, 0);
@@ -266,13 +289,13 @@ namespace grasp_motion
 
               if(contact_status == contact_status::BOTH)
                 {
-                  tf::Quaternion baselink_contact_rot(0, 0, 0, 1);
-                  tf::quaternionEigenToTF(grasp_form_search_method_->getBestContactRot().at(baselink_), baselink_contact_rot);
-                  double baselink_contact_phi = transportator_->uav_cog_yaw_ - (tf::getYaw(baselink_contact_rot) + transportator_->object_yaw_);
-                  if(baselink_contact_phi > M_PI) baselink_contact_phi -= 2*M_PI;
-                  if(baselink_contact_phi <-M_PI) baselink_contact_phi += 2*M_PI;
+                  /* debug: contact distance for baselink  */
+                  tf::Vector3 vertex_p;
+                  tf::vectorEigenToTF(grasp_form_search_method_->getObjectInfo().at(baselink_)->vertex_p_, vertex_p);
+                  double baselink_contact_d = ((getRotorOriginInWordFrame(baselink_) +  transportator_->getObject2dTransform().getBasis() * tf::Matrix3x3(baselink_contact_rot) * tf::Vector3(0, duct_radius, 0)) - transportator_->getObject2dTransform() * vertex_p).length();
 
-                  ROS_WARN("baselink_contact_phi: %f, lower bound: %f, upper bound: %f", baselink_contact_phi, grasp_form_search_method_->getValidLowerBoundPhi().at(baselink_), grasp_form_search_method_->getValidUpperBoundPhi().at(baselink_));
+                  ROS_WARN("baselink_contact_phi: %f, lower bound: %f, upper bound: %f, baselink_contact_d: %f", baselink_contact_phi, grasp_form_search_method_->getValidLowerBoundPhi().at(baselink_), grasp_form_search_method_->getValidUpperBoundPhi().at(baselink_), baselink_contact_d);
+
                   if(grasp_form_search_method_->getValidLowerBoundPhi().at(baselink_) < baselink_contact_phi && baselink_contact_phi < grasp_form_search_method_->getValidUpperBoundPhi().at(baselink_))
                     {
                       //ROS_ERROR("convergent");
@@ -295,6 +318,9 @@ namespace grasp_motion
                 center_joint_p = transportator_->getUavCog2dTransform() * (cog2baselink_rotor + tf::Vector3(-grasp_form_search_method_->getLinkLength()/2, 0, 0));
 
               uav_target_cog_acc = (transportator_->object_2d_pos_ -  center_joint_p).normalized() * contact_tilt_angle_ * G;
+
+              /* rqt_plot debug */
+              contact_state_msg.z = transportator_->uav_cog_yaw_;
 
               switch(contact_status)
                 {
@@ -324,6 +350,8 @@ namespace grasp_motion
 
           if(debug_verbose_)
             ROS_INFO("[hydrus grasp motion]: contact motion, target acc: [%f, %f, %f], baselink contact dist: %f, neighbour link contact dist: %f", uav_target_cog_acc.x(), uav_target_cog_acc.y(), uav_target_cog_acc.z(), baselink_dist, neighbour_dist);
+          /* rqt_plot debug */
+          contact_state_pub_.publish(contact_state_msg);
 
           if(full_contact)
             {
@@ -558,13 +586,22 @@ namespace grasp_motion
   {
     assert(joint_motors_msg->motor_states.size() == uav_kinematics_->getRotorNum() - 1);
 
+    /* debug */
+    dynamixel_msgs::MotorStateList joint_motors_debug_msg = *joint_motors_msg;
+
     for(int i = 0; i < joint_motors_msg->motor_states.size(); i++)
       {
         joints_.at(i).moving_ = joint_motors_msg->motor_states.at(i).moving;
         joints_.at(i).current_torque_ = joint_motors_msg->motor_states.at(i).load;
         joints_.at(i).temperature_ = joint_motors_msg->motor_states.at(i).temperature;
         joints_.at(i).error_ = joint_motors_msg->motor_states.at(i).error;
+
+        /* debug */
+        joint_motors_debug_msg.motor_states.at(i).load = (joint_motors_msg->motor_states.at(i).load > 648)?1:(joint_motors_msg->motor_states.at(i).load/648);
       }
+
+    /* debug */
+    joint_motors_pub_.publish(joint_motors_debug_msg);
   }
 
   tf::Vector3 WholeBody::getUavTargetApproach2DPos()

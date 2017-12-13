@@ -232,6 +232,10 @@ namespace contact_status
     ros::Subscriber joint_motors_sub_;
     ros::ServiceClient control_gain_client_;
 
+    /* debug */
+    ros::Publisher joint_motors_pub_;
+    ros::Publisher contact_state_pub_;
+
     /* plugin for grasp searching */
     boost::shared_ptr<grasp_form_search::GraspFormSearch> grasp_form_search_method_;
     /* uav kinematics */

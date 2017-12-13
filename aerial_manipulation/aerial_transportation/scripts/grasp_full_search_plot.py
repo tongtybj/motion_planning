@@ -93,15 +93,13 @@ if __name__=="__main__":
 
         #cm = pyplot.get_cmap("winter")
         #col = [cm(float(i)/(len(max_tau_list))) for i in xrange(0, len(max_tau_list))]
-
         '''
         # max_tau
         ax.scatter(d_list, delta_list, max_tau_list, s= 1, alpha=0.5)
         ax.scatter(valid_d_list, valid_delta_list, valid_max_tau_list, s= 1, color="red")
-        ax.set_zlim(2.0, 4.0)
+        ax.set_zlim(2.5, 4.0)
         max_value =3.09678
         '''
-
         '''
         # min_thrust
         ax.scatter(d_list, delta_list, min_thrust_list, s= 1, alpha=0.5)
@@ -110,19 +108,19 @@ if __name__=="__main__":
         max_value =9.883
         '''
 
-        '''
         # max_thrust
         ax.scatter(d_list, delta_list, max_thrust_list, s= 1, alpha=0.5)
         ax.scatter(valid_d_list, valid_delta_list, valid_max_thrust_list, s= 1, color="red")
         ax.set_zlim(11.3, 11.55)
         max_value =11.3885
-        '''
 
+        '''
         # state
         ax.scatter(d_list, delta_list, state_list, s= 1, alpha=0.5)
         ax.scatter(valid_d_list, valid_delta_list, valid_state_list, s= 1, color="red")
         ax.set_zlim(12, 12.6)
         max_value = 12.2
+        '''
 
         start1 = []
         start2 = []
@@ -139,16 +137,15 @@ if __name__=="__main__":
         #fig, ax = pyplot.subplots()
         #pyplot.xlabel("xlabel", fontsize=18)
         #pyplot.ylabel("ylabel", fontsize=18)
-        pyplot.rcParams["font.size"] = 18
+        pyplot.rcParams["font.size"] = 30
         pyplot.axvspan(-0.0730052, 0.0139948, alpha=0.5, color='red')
 
-        '''
+
         # max tau
         y_min = min(max_tau_list) - 0.005
         y_max = max(max_tau_list) + 0.005
         pyplot.ylim((y_min,y_max))
         pyplot.plot(delta_list, max_tau_list, color='black')
-        '''
 
         '''
         # min_thrust
@@ -157,7 +154,6 @@ if __name__=="__main__":
         pyplot.ylim((y_min,y_max))
         pyplot.plot(delta_list, min_thrust_list, color='black')
         '''
-
         '''
         # max_thrust
         y_min = min(max_thrust_list) - 0.005
@@ -165,13 +161,13 @@ if __name__=="__main__":
         pyplot.ylim((y_min,y_max))
         pyplot.plot(delta_list, max_thrust_list, color='black')
         '''
-
+        '''
         # state
         y_min = min(state_list) - 0.005
         y_max = max(state_list) + 0.005
         pyplot.ylim((y_min,y_max))
         pyplot.plot(delta_list, state_list, color='black')
-
+        '''
         pyplot.vlines(x=-0.0295052, ymin=y_min, ymax=y_max, color='blue',  linestyles ='dashed', zorder=2)
         pyplot.show()
 
