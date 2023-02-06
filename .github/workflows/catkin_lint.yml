@@ -1,4 +1,4 @@
-on: [push, pull_request]
+ on: [push, pull_request]
 
 jobs:
   test:
@@ -26,6 +26,7 @@ jobs:
       - name: catkin lint test
         run: |
           wstool init
-          wstool merge aerial_robot_noetic.rosinstall
+          wstool merge motion_planning/noetic.rosinstall
           wstool update
-          ROS_DISTRO=noetic catkin_lint --resolve-env --strict $PWD --skip-path kalman_filter --skip-path ublox_gps --skip-path aerial_robot_3rdparty  --skip-path rosserial
+          wstool merge jsk_aerial_robot/aerial_robot_noetic.rosinstall
+          ROS_DISTRO=noetic catkin_lint --resolve-env --strict $PWD --skip-path jsk_aerial_robot --skip-path kalman_filter --skip-path ublox_gps --skip-path aerial_robot_3rdparty  --skip-path rosserial --skip-path dynamixel_motor

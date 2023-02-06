@@ -3,9 +3,6 @@ project(aerial_motion_planning_msgs)
 
 add_compile_options(-std=c++14)
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   bspline_ros
@@ -21,7 +18,6 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES multilink_state continuous_path_generator
   CATKIN_DEPENDS geometry_msgs roscpp sensor_msgs moveit_msgs
-#  DEPENDS system_lib
 )
 
 ###########
@@ -40,3 +36,11 @@ add_dependencies(multilink_state ${catkin_EXPORTED_TARGETS})
 add_library(continuous_path_generator
   src/continuous_path_generator.cpp)
 target_link_libraries(continuous_path_generator ${catkin_LIBRARIES})
+
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+
+
+install(TARGETS multilink_state continuous_path_generator
+  DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
