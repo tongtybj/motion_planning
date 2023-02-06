@@ -1,0 +1,54 @@
+motion_func_rate: 0
+
+debug: true
+
+## base init and goal
+start_state_x: -2.0
+start_state_y: 0.0
+start_state_z: 0.5
+start_state_roll: 0.0
+start_state_pitch: 0.0
+start_state_yaw: 0.0
+
+goal_state_x: 2.0
+goal_state_y: 0.0
+goal_state_z: 0.5
+goal_state_roll: 0.0
+goal_state_pitch: 0.0
+goal_state_yaw: 0.0
+
+## joint init and goal
+start_joint1: 1.5
+start_joint2: 1.5
+start_joint3: 1.5
+goal_joint1: 1.5
+goal_joint2: 1.5
+goal_joint3: 1.5
+
+# stability constraint
+/hydrus:
+  fc_ang_acc_rp_min_thre: 20.0 # FC RP for angular accelator
+
+# OMPL
+ompl_mode: 0 # RRT_START_MODE
+planning_mode: 2
+
+# planning cost 
+length_cost_thre: 10.0 # TODO
+save_path_flag: false # save planning result
+
+# discrete path smoothing filter
+discrete_path_filter_flag: true
+filter_rate: 1 # no filtering
+
+# discrete path resampling
+discrete_path_resampling_flag: true
+resampling_angular_rate: 0.25 # 0.25 is smoother for rotation motion, default 1
+
+# continuous path
+bspline_degree: 5
+
+# thresholds
+joint_thresh: 0.05
+pos_thresh: 0.1
+rot_thresh: 0.05

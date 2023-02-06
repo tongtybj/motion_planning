@@ -90,6 +90,7 @@ namespace squeeze_motion_planner
       nhp_.param("debug", debug_, true);
 
       /* set start pose */
+      start_state_ = MultilinkState(robot_model_ptr_);
       geometry_msgs::Pose pose;
       nhp_.param("start_state_x", pose.position.x, 0.0);
       nhp_.param("start_state_y", pose.position.y, 0.5);
@@ -106,6 +107,7 @@ namespace squeeze_motion_planner
       start_state_.setStatesFromRoot(robot_model_ptr_, pose, joint_state);
 
       /* set goal pose */
+      goal_state_ = MultilinkState(robot_model_ptr_);
       nhp_.param("goal_state_x", pose.position.x, 0.0);
       nhp_.param("goal_state_y", pose.position.y, 0.5);
       nhp_.param("goal_state_z", pose.position.z, 0.0);
@@ -116,17 +118,6 @@ namespace squeeze_motion_planner
       for(int i = 0; i < robot_model_ptr_->getLinkJointNames().size(); i++)
         nhp_.param(std::string("goal_") + robot_model_ptr_->getLinkJointNames().at(i), joint_state(robot_model_ptr_->getLinkJointIndices().at(i)), 0.0);
       goal_state_.setStatesFromRoot(robot_model_ptr_, pose, joint_state);
-
-      /* get opening center frame from rosparam */
-      nhp_.param("openning_pos_x", pose.position.x, 0.0);
-      nhp_.param("openning_pos_y", pose.position.y, 0.0);
-      nhp_.param("openning_pos_z", pose.position.z, 0.0);
-      nhp_.param("openning_roll", r, 0.0);
-      nhp_.param("openning_pitch", p, 0.0);
-      nhp_.param("openning_yaw", y, 0.0);
-
-      tf::pointMsgToTF(pose.position, openning_center_frame_.getOrigin());
-      openning_center_frame_.setRotation(tf::createQuaternionFromRPY(r, p, y));
 
       setCollisionEnv();
 

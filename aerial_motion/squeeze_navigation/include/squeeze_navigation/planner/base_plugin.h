@@ -59,6 +59,20 @@ namespace squeeze_motion_planner
 
       nhp_.param("debug_verbose", debug_verbose_, false);
 
+      /* get opening center frame from rosparam */
+      geometry_msgs::Pose pose;
+      nhp_.param("openning_pos_x", pose.position.x, 0.0);
+      nhp_.param("openning_pos_y", pose.position.y, 0.0);
+      nhp_.param("openning_pos_z", pose.position.z, 0.0);
+      double r, p, y;
+      nhp_.param("openning_roll", r, 0.0);
+      nhp_.param("openning_pitch", p, 0.0);
+      nhp_.param("openning_yaw", y, 0.0);
+
+      tf::pointMsgToTF(pose.position, openning_center_frame_.getOrigin());
+      openning_center_frame_.setRotation(tf::createQuaternionFromRPY(r, p, y));
+
+
       /* continous path generator */
       continuous_path_generator_ = boost::make_shared<ContinuousPathGenerator>(nh_, nhp_, robot_model_ptr_);
     }

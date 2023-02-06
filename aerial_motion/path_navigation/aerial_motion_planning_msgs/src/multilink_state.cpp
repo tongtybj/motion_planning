@@ -39,6 +39,46 @@
 /* TODO1: the orientation of CoG frame is not resolved!! */
 /* TODO2: provide a funcion of nominal_joint_angles for aerial_robot_mode, this does not only benefit dragon, but also other robot model. */
 
+MultilinkState::MultilinkState(): cog_pose_(), root_pose_(), cog_twist_(), gimbal_module_flag_(false)
+{
+}
+
+MultilinkState::MultilinkState(boost::shared_ptr<aerial_robot_model::RobotModel> robot_model_ptr): MultilinkState()
+{
+  joint_index_map_ = robot_model_ptr->getJointIndexMap();
+  joint_state_.resize(joint_index_map_.size());
+
+  /* TODO: hard-coding */
+  for(auto tree_itr : robot_model_ptr->getTree().getSegments())
+    {
+      std::string joint_name = tree_itr.second.segment.getJoint().getName();
+      if(joint_name.find("gimbal") == 0 &&
+         (joint_name.find("roll") != std::string::npos ||
+          joint_name.find("pitch") != std::string::npos) &&
+         tree_itr.second.segment.getJoint().getType() != KDL::Joint::JointType::None)
+        {
+          gimbal_module_flag_ = true;
+          break;
+        }
+    }
+}
+
+MultilinkState::MultilinkState(boost::shared_ptr<aerial_robot_model::RobotModel> robot_model_ptr,
+                               const tf::Quaternion& baselink_desired_att,
+                               const geometry_msgs::Pose& cog_pose,
+                               const KDL::JntArray& joint_state): MultilinkState(robot_model_ptr)
+{
+  setStatesFromCog(robot_model_ptr, baselink_desired_att, cog_pose, joint_state);
+}
+
+
+MultilinkState::MultilinkState(boost::shared_ptr<aerial_robot_model::RobotModel> robot_model_ptr,
+                 const geometry_msgs::Pose& root_pose,
+                 const KDL::JntArray& joint_state): MultilinkState(robot_model_ptr)
+{
+  setStatesFromRoot(robot_model_ptr, root_pose, joint_state);
+}
+
 void MultilinkState::convertCogPose2RootPose(boost::shared_ptr<aerial_robot_model::RobotModel> robot_model_ptr,
                                              const tf::Quaternion& baselink_desired_att,
                                              const geometry_msgs::Pose& cog_pose,
@@ -78,7 +118,10 @@ void MultilinkState::setStatesFromCog(boost::shared_ptr<aerial_robot_model::Robo
   convertCogPose2RootPose(robot_model_ptr, baselink_desired_att, cog_pose, joint_state, root_pose_);
 
   /* special process for model with gimbal module */
-  if(gimbal_module_flag_) joint_state_ = boost::dynamic_pointer_cast<Dragon::HydrusLikeRobotModel>(robot_model_ptr)->getGimbalProcessedJoint<KDL::JntArray>();
+  if(gimbal_module_flag_)
+    {
+      joint_state_ = boost::dynamic_pointer_cast<Dragon::HydrusLikeRobotModel>(robot_model_ptr)->getGimbalProcessedJoint<KDL::JntArray>();
+    }
 }
 
 void MultilinkState::convertBaselinkPose2RootPose(boost::shared_ptr<aerial_robot_model::RobotModel> robot_model_ptr,
@@ -133,7 +176,10 @@ void MultilinkState::setStatesFromRoot(boost::shared_ptr<aerial_robot_model::Rob
   convertRootPose2CogPose(robot_model_ptr, root_pose, joint_state, baselink_desired_att_, cog_pose_);
 
   /* special process for model with gimbal module */
-  if(gimbal_module_flag_) joint_state_ = boost::dynamic_pointer_cast<Dragon::HydrusLikeRobotModel>(robot_model_ptr)->getGimbalProcessedJoint<KDL::JntArray>();
+  if(gimbal_module_flag_)
+    {
+      joint_state_ = boost::dynamic_pointer_cast<Dragon::HydrusLikeRobotModel>(robot_model_ptr)->getGimbalProcessedJoint<KDL::JntArray>();
+    }
 }
 
 template<> const std::vector<double> MultilinkState::getRootJointStateConst() const

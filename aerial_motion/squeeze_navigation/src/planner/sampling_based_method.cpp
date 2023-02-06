@@ -52,66 +52,67 @@ namespace squeeze_motion_planner
 
       planner_core_->setScene(setCollisionWorld());
     };
-
     void setInitState(const MultilinkState& state)  { planner_core_->setStartState(state); }
 
     moveit_msgs::CollisionObject setCollisionWorld()
     {
+
       moveit_msgs::CollisionObject collision_object;
 
       /* set env */
       collision_object.header.frame_id = "world";
       collision_object.id = "box";
+      //collision_object.pose.orientation.w = 1;
 
       geometry_msgs::Pose wall_pose;
-      wall_pose.orientation.w = 1.0;
-      wall_pose.position.z = 0.0;
       shape_msgs::SolidPrimitive wall_primitive;
       wall_primitive.type = wall_primitive.BOX;
       wall_primitive.dimensions.resize(3);
 
-      /* gap type 1: vertical gap */
-      int gap_type ;
-      nhp_.param("gap_type", gap_type, 0); //Type0: vertical; Type1: horizontal
-      if(gap_type == HORIZONTAL_GAP)
+      double wall_thickness;
+      nhp_.param("wall_thickness", wall_thickness, 0.05);
+
+      if(planner_core_->getMotionType() == sampling_based_method::PlanningMode::SE2)
         {
-          double gap_left_x;
-          double gap_x_offset;
-          double gap_y_offset;
-          double gap_left_width;
-          double gap_right_width;
+          /* setup env */
+          double openning_width, env_width, env_length, openning_yaw;
+          nhp_.param("openning_width", openning_width, 0.8);
+          nhp_.param("openning_yaw", openning_yaw, 0.0);
+          nhp_.param("env_width", env_width, 4.0);
+          nhp_.param("env_length", env_length, 6.0);
 
-          nhp_.param("gap_left_x", gap_left_x, 0.0);
-          nhp_.param("gap_y_offset", gap_y_offset, 0.6); //minus: overlap
-          nhp_.param("gap_left_width", gap_left_width, 0.3); //minus: bandwidth
-          nhp_.param("gap_right_width", gap_right_width, 0.3); //minus: bandwidth
+          // wall size
+          wall_primitive.dimensions[0] = env_length;
+          wall_primitive.dimensions[1] = wall_thickness;
+          wall_primitive.dimensions[2] = 2;
 
-          wall_primitive.dimensions[2] = 10;
-
-          wall_pose.position.x = gap_left_x + gap_left_width /2;
-          wall_pose.position.y =  (2.5 + gap_y_offset) /2;
-          wall_primitive.dimensions[0] = gap_left_width;
-          wall_primitive.dimensions[1] = 2.5;
+          tf::poseTFToMsg(tf::Transform(openning_center_frame_.getRotation(),
+                                        openning_center_frame_ * tf::Vector3(0, -env_width / 2, 0)),
+                          wall_pose);
           collision_object.primitives.push_back(wall_primitive);
           collision_object.primitive_poses.push_back(wall_pose);
 
-          wall_pose.position.x = gap_left_x + gap_right_width /2;
-          wall_pose.position.y = - (2.5 + gap_y_offset) /2;
+          tf::poseTFToMsg(tf::Transform(openning_center_frame_.getRotation(),
+                                        openning_center_frame_ * tf::Vector3(0, env_width / 2, 0)),
+                          wall_pose);
           collision_object.primitives.push_back(wall_primitive);
           collision_object.primitive_poses.push_back(wall_pose);
 
-          wall_pose.position.x = 1.0;
-          wall_pose.position.y = 2.5;
-          wall_primitive.dimensions[0] = 8;
-          wall_primitive.dimensions[1] = 0.6;
+          wall_primitive.dimensions[0] = wall_thickness;
+          wall_primitive.dimensions[1] = env_width / 2 - openning_width / 2;
+          tf::poseTFToMsg(tf::Transform(openning_center_frame_.getRotation(),
+                                        openning_center_frame_ * tf::Vector3(0, env_width/4 + openning_width/4, 0)),
+                          wall_pose);
           collision_object.primitives.push_back(wall_primitive);
           collision_object.primitive_poses.push_back(wall_pose);
 
-          wall_pose.position.y = -2.5;
+          tf::poseTFToMsg(tf::Transform(openning_center_frame_.getRotation(),
+                                        openning_center_frame_ * tf::Vector3(0, -env_width/4 - openning_width/4, 0)),
+                          wall_pose);
           collision_object.primitives.push_back(wall_primitive);
           collision_object.primitive_poses.push_back(wall_pose);
         }
-      if(gap_type == VERTICAL_GAP)
+      else
         {
           double gap_x_width, gap_y_width, gap_height;
           double wall_length = 10;
@@ -213,7 +214,11 @@ namespace squeeze_motion_planner
 
     bool corePlan ()
     {
-      return planner_core_->plan();
+      if(!planner_core_->plan()) return false;
+
+      discrete_path_ = planner_core_->getPathConst();
+
+      return true;
     }
 
     bool loadPath() { return planner_core_->loadPath();}

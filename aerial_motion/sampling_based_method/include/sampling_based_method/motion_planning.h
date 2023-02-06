@@ -92,6 +92,7 @@ namespace sampling_base
       const std::vector<MultilinkState>& getPathConst() const { return path_;}
       const MultilinkState& getStateConst(int index) const { return path_.at(index);}
 
+      inline int getMotionType() {return motion_type_;}
       inline int getPathSize(){return  path_.size();}
       inline double getMotionCost(){return best_cost_;}
       inline float getPlanningTime(){return calculation_time_;}
@@ -100,8 +101,8 @@ namespace sampling_base
       inline int  getMinForcetateIndex() {return min_force_state_index_;}
       inline double getMaxForce() {return  max_force_; }
       inline int  getMaxForcetateIndex() {return max_force_state_index_;}
-      inline double getMinVar() {return  min_var_; }
-      inline int  getMinVarStateIndex() {return min_var_state_index_;}
+      inline double getMinFcRp() {return  min_fc_rp_; }
+      inline int  getMinFcRpStateIndex() {return min_fc_rp_state_index_;}
       inline void setStartState(const MultilinkState& state) { start_state_ = state;}
       inline void setGoalState(const MultilinkState& state) { goal_state_ = state;}
 
@@ -158,8 +159,8 @@ namespace sampling_base
       double length_cost_thre_;
       double best_cost_;
       int planning_mode_;
-      double min_var_;
-      int min_var_state_index_;
+      double min_fc_rp_;
+      int min_fc_rp_state_index_;
       double max_force_, min_force_;
       int max_force_state_index_, min_force_state_index_;
 

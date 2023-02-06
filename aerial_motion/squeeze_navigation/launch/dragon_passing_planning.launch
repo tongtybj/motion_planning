@@ -49,7 +49,7 @@
     <param name="discrete_path_search_method_name" value="squeeze_navigation/$(arg discrete_path_search_method_name)" />
 
     <rosparam file="$(find squeeze_navigation)/config/$(arg discrete_path_search_method_name)/dragon_$(arg type).yaml" command="load" />
-    <rosparam file="$(find squeeze_navigation)/config/$(arg discrete_path_search_method_name)/gap.yaml" command="load"/>
+    <rosparam file="$(find squeeze_navigation)/config/env/gap.yaml" command="load"/>
 
     <param name="discrete_path_debug_flag" value="$(arg discrete_path_debug_flag)" />
     <param name="planning_mode" value="2" /> <!-- if="$(arg transformation)" -->

@@ -189,7 +189,7 @@ Visualization Manager:
       Enabled: true
       Move Group Namespace: ""
       Name: PlanningScene
-      Planning Scene Topic: /planning_scene
+      Planning Scene Topic: /hydrus/planning_scene
       Robot Description: hydrus/robot_description
       Scene Geometry:
         Scene Alpha: 0.800000011920929
@@ -348,7 +348,7 @@ Visualization Manager:
       Marker Topic: /env_collision
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/TF
@@ -389,14 +389,6 @@ Visualization Manager:
         hydrus/pc:
           Value: true
         hydrus/root:
-          Value: true
-        hydrus/thrust1:
-          Value: true
-        hydrus/thrust2:
-          Value: true
-        hydrus/thrust3:
-          Value: true
-        hydrus/thrust4:
           Value: true
       Marker Scale: 0.5
       Name: TF

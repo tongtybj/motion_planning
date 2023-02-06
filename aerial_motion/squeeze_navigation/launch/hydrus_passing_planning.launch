@@ -40,7 +40,7 @@
   </group>
 
   ###########  Path Planning and Navigation  ###########
-  <node pkg="squeeze_navigation" type="squeeze_navigation_node" name="squeeze_navigation_node" output="screen" ns="$(arg robot_ns)" >
+  <node pkg="squeeze_navigation" type="squeeze_navigation_node" name="squeeze_navigation_node" output="screen" ns="$(arg robot_ns)">
     <param name="debug_verbose" value="false" />
     <param name="headless" value="$(arg headless)" />
 
@@ -50,7 +50,7 @@
     <param name="discrete_path_search_method_name" value="squeeze_navigation/$(arg discrete_path_search_method_name)" />
 
     <rosparam file="$(find squeeze_navigation)/config/$(arg discrete_path_search_method_name)/hydrus_$(arg type).yaml" command="load" />
-    <rosparam file="$(find squeeze_navigation)/config/$(arg discrete_path_search_method_name)/2d_gap.yaml" command="load"/>
+    <rosparam file="$(find squeeze_navigation)/config/env/2d_gap.yaml" command="load"/>
 
     <param name="discrete_path_debug_flag" value="$(arg discrete_path_debug_flag)" />
     <param name="motion_type" value="0" /> <!--SE2: 0, SE3: 1 -->

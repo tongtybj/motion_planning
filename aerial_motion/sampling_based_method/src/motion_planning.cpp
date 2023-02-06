@@ -35,7 +35,6 @@
 
 #include <sampling_based_method/motion_planning.h>
 
-/* TODO: this is an workaround */
 #include <hydrus/hydrus_robot_model.h>
 
 
@@ -48,12 +47,18 @@ namespace sampling_base
 {
   MotionPlanning::MotionPlanning(ros::NodeHandle nh, ros::NodeHandle nhp, boost::shared_ptr<aerial_robot_model::RobotModel> robot_model_ptr):
     nh_(nh), nhp_(nhp), robot_model_ptr_(robot_model_ptr),
+    start_state_(robot_model_ptr), goal_state_(robot_model_ptr),
     path_(0), calculation_time_(0),
-    best_cost_(-1), min_var_(1e6),
-    max_force_state_index_(0), min_force_state_index_(1e6),
+    best_cost_(-1), min_fc_rp_(1e6), min_fc_rp_state_index_(0),
+    max_force_state_index_(0), min_force_state_index_(0),
     planning_mode_(sampling_based_method::PlanningMode::ONLY_JOINTS_MODE),
     motion_type_(sampling_based_method::PlanningMode::SE2)
   {
+    /* setup planning_scene */
+    robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
+    planning_scene_ = boost::shared_ptr<planning_scene::PlanningScene>(new planning_scene::PlanningScene(robot_model_loader.getModel()));
+    acm_ = planning_scene_->getAllowedCollisionMatrix();
+
     /* ros pub/sub and service */
     planning_scene_diff_pub_ = nh_.advertise<moveit_msgs::PlanningScene>("planning_scene", 1);
 
@@ -76,7 +81,8 @@ namespace sampling_base
   bool  MotionPlanning::isStateValid(const ompl::base::State *state)
   {
     geometry_msgs::Pose root_pose;
-    KDL::JntArray joint_state(robot_model_ptr_->getJointIndexMap().size());
+    KDL::JntArray joint_state(robot_model_ptr_->getTree().getNrOfJoints());
+
 
     if(planning_mode_ == sampling_based_method::PlanningMode::ONLY_JOINTS_MODE)
       {
@@ -136,19 +142,22 @@ namespace sampling_base
 
     //check distance thresold
     if(planning_mode_ == sampling_based_method::PlanningMode::JOINTS_AND_BASE_MODE ||
-       planning_mode_ == sampling_based_method::PlanningMode::ONLY_JOINTS_MODE ||
-       motion_type_ == sampling_based_method::PlanningMode::SE3)
+       planning_mode_ == sampling_based_method::PlanningMode::ONLY_JOINTS_MODE)
       {
-#if 0
-        /* special for the dragon kinematics */
-        /* consider rootlink (link1) as baselink */
-        KDL::Rotation q;
-        tf::quaternionMsgToKDL(root_pose.orientation, q);
-        robot_model_ptr_->setCogDesireOrientation(q);
+        if (motion_type_ == sampling_based_method::PlanningMode::SE3)
+          {
+            /* special for the dragon kinematics */
+            /* consider rootlink (link1) as baselink */
+            KDL::Rotation q;
+            tf::quaternionMsgToKDL(root_pose.orientation, q);
+            robot_model_ptr_->setCogDesireOrientation(q);
+          }
+
         robot_model_ptr_->updateRobotModel(joint_state);
-#endif
-        if(!robot_model_ptr_->stabilityCheck()) return false;
+
+        if(!robot_model_ptr_->stabilityCheck(false)) return false;
       }
+
 
     if(planning_mode_ == sampling_based_method::PlanningMode::ONLY_JOINTS_MODE) return true;
     //check collision
@@ -180,7 +189,7 @@ namespace sampling_base
     path_.clear();
     assert(path_.size() == 0);
     calculation_time_ = 0;
-    min_var_ = 1e6;
+    min_fc_rp_ = 1e6;
     max_force_state_index_ = 0;
     min_force_state_index_ = 1e6;
 
@@ -351,10 +360,6 @@ namespace sampling_base
     ros::Duration sleep_time(1.0);
     sleep_time.sleep();
 
-    robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
-    planning_scene_ = boost::shared_ptr<planning_scene::PlanningScene>(new planning_scene::PlanningScene(robot_model_loader.getModel()));
-    acm_ = planning_scene_->getAllowedCollisionMatrix();
-
     planning_scene_->setCurrentState(start_state_.getRootJointStateConst<moveit_msgs::RobotState>());
     planning_scene_->getPlanningSceneMsg(planning_scene_msg_);
     planning_scene_msg_.is_diff = true;
@@ -362,12 +367,13 @@ namespace sampling_base
 
     /* check collision*/
     collision_detection::CollisionRequest collision_request;
+    collision_request.contacts = true;
     collision_detection::CollisionResult collision_result;
-    planning_scene_->checkCollision(collision_request, collision_result);
+    planning_scene_->checkCollision(collision_request, collision_result, planning_scene_->getCurrentState(), acm_);
 
     if(collision_result.collision)
       {
-        ROS_ERROR("collsion with init state, stop planning");
+        ROS_ERROR_STREAM("collision with init state, stop planning. contact count: " << collision_result.contact_count);
         return false;
       }
 
@@ -446,7 +452,7 @@ namespace sampling_base
           }
 
         /* log data */
-        ROS_WARN("plan size is %d, planning time is %f, motion cost is %f, min var is %f, min var state index: %d", getPathSize(), getPlanningTime(), getMotionCost(), getMinVar(), getMinVarStateIndex());
+        ROS_WARN("plan size is %d, planning time is %f, motion cost is %f, min fc rp is %f, min fc rp state index: %d", getPathSize(), getPlanningTime(), getMotionCost(), getMinFcRp(), getMinFcRpStateIndex());
 
         if(save_path_flag_) savePath();
 
@@ -546,7 +552,7 @@ namespace sampling_base
   void MotionPlanning::addState(ompl::base::State *ompl_state)
   {
     geometry_msgs::Pose root_pose;
-    KDL::JntArray joint_state(robot_model_ptr_->getJointIndexMap().size());
+    KDL::JntArray joint_state(robot_model_ptr_->getTree().getNrOfJoints());
 
     if(planning_mode_ == sampling_based_method::PlanningMode::ONLY_JOINTS_MODE)
       {
@@ -602,23 +608,26 @@ namespace sampling_base
           }
       }
 
-    /* special  */
-    /* consider rootlink (link1) as baselink */
-    KDL::Rotation q;
-    tf::quaternionMsgToKDL(root_pose.orientation, q);
-    robot_model_ptr_->setCogDesireOrientation(q);
+    if (motion_type_ == sampling_based_method::PlanningMode::SE3)
+      {
+        KDL::Rotation q;
+        tf::quaternionMsgToKDL(root_pose.orientation, q);
+        robot_model_ptr_->setCogDesireOrientation(q);
+      }
     robot_model_ptr_->updateRobotModel(joint_state);
     robot_model_ptr_->stabilityCheck();
 
 
-    /* workaround for old method wich using roll/pitch position margin */
-    auto hydrus_model_ptr = boost::dynamic_pointer_cast<HydrusRobotModel>(robot_model_ptr_);
-    if(hydrus_model_ptr->getRollPitchPositionMargin() < min_var_)
+    if(motion_type_ == sampling_based_method::PlanningMode::SE2)
       {
-        min_var_ = hydrus_model_ptr->getRollPitchPositionMargin() ;
-        min_var_state_index_ = path_.size();
+        auto hydrus_model_ptr = boost::dynamic_pointer_cast<HydrusRobotModel>(robot_model_ptr_);
+        double min_fc_rp = hydrus_model_ptr->getFeasibleControlAngAccRollPitchMin();
+        if(min_fc_rp < min_fc_rp_)
+          {
+            min_fc_rp_ = min_fc_rp;
+            min_fc_rp_state_index_ = path_.size();
+          }
       }
-
 
     if(robot_model_ptr_->getStaticThrust().maxCoeff() > max_force_)
       {
@@ -636,7 +645,17 @@ namespace sampling_base
     tf::Quaternion tf_q;
     quaternionMsgToTF(root_pose.orientation, tf_q);
     tf::Matrix3x3(tf_q).getRPY(r, p, y);
-    ROS_INFO("index: %d, dist_var: %f, max_force: %f, base pose: [%f, %f, %f] att: [%f, %f, %f]", (int)path_.size(), hydrus_model_ptr->getRollPitchPositionMargin(), robot_model_ptr_->getStaticThrust().maxCoeff(), root_pose.position.x, root_pose.position.y, root_pose.position.z, r, p, y);
+    std::stringstream ss;
+    ss << "index: " << (int)path_.size() << " force: [" << robot_model_ptr_->getStaticThrust().minCoeff() << ", " <<  robot_model_ptr_->getStaticThrust().maxCoeff() << "], base pose: [" <<  root_pose.position.x << ", " << root_pose.position.y << ", " << root_pose.position.z << "] att: [" << r << ", " <<  p << ", " << y << "]";
+
+    if(motion_type_ == sampling_based_method::PlanningMode::SE2)
+      {
+        auto hydrus_model_ptr = boost::dynamic_pointer_cast<HydrusRobotModel>(robot_model_ptr_);
+        double min_fc_rp = hydrus_model_ptr->getFeasibleControlAngAccRollPitchMin();
+        ss << ", min fc rp: " << min_fc_rp;
+      }
+
+    ROS_INFO_STREAM(ss.str());
 
     addState(MultilinkState(robot_model_ptr_, root_pose, joint_state));
   }
@@ -666,8 +685,8 @@ namespace sampling_base
     ofs << "planning_mode: " << planning_mode_ << std::endl;
     ofs << "planning_time: " << calculation_time_ << std::endl;
     ofs << "motion_cost: " << best_cost_ << std::endl;
-    ofs << "minimum_var: " << min_var_ << std::endl;
-    ofs << "minimum_var_state_entry: " << min_var_state_index_  << std::endl;
+    ofs << "minimum_var: " << min_fc_rp_ << std::endl;
+    ofs << "minimum_var_state_entry: " << min_fc_rp_state_index_  << std::endl;
 
     for(auto k = 0; k < (int)path_.size();  k++)
       {
@@ -717,7 +736,7 @@ namespace sampling_base
     std::string str;
     std::string header;
     std::vector<double> root_pose_vec(7);
-    KDL::JntArray joint_state(robot_model_ptr_->getJointIndexMap().size());
+    KDL::JntArray joint_state(robot_model_ptr_->getTree().getNrOfJoints());
 
     //1 start and goal state
     std::getline(ifs, str);
@@ -764,12 +783,12 @@ namespace sampling_base
     std::cout << header << best_cost_ <<std::endl;
     std::getline(ifs, str);
     ss[6].str(str);
-    ss[6] >> header >> min_var_;
-    std::cout << header << min_var_ << std::endl;
+    ss[6] >> header >> min_fc_rp_;
+    std::cout << header << min_fc_rp_ << std::endl;
     std::getline(ifs, str);
     ss[7].str(str);
-    ss[7] >> header >> min_var_state_index_;
-    std::cout << header << min_var_state_index_ <<std::endl;
+    ss[7] >> header >> min_fc_rp_state_index_;
+    std::cout << header << min_fc_rp_state_index_ <<std::endl;
 
     for(int k = 0; k < state_list;  k++)
       {
@@ -794,7 +813,7 @@ namespace sampling_base
           max_force_ = robot_model_ptr_->getStaticThrust().maxCoeff();
       }
 
-    ROS_WARN("plan size is %d, planning time is %f, motion cost is %f, min var is %f, min var state index: %d, min force: %f, max force: %f", getPathSize(), getPlanningTime(), getMotionCost(), min_var_, min_var_state_index_, min_force_, max_force_);
+    ROS_WARN("plan size is %d, planning time is %f, motion cost is %f, min fc rp is %f, min fc rp state index: %d, min force: %f, max force: %f", getPathSize(), getPlanningTime(), getMotionCost(), min_fc_rp_, min_fc_rp_state_index_, min_force_, max_force_);
 
     return true;
   }
@@ -805,7 +824,10 @@ namespace sampling_base
     collision_detection::CollisionResult collision_result;
     planning_scene_->setCurrentState(state.getRootJointStateConst<moveit_msgs::RobotState>());
     planning_scene_->checkCollision(collision_request, collision_result); //TODO acm_
-    if(collision_result.collision) ROS_WARN("Robot collision with env");
+    if(collision_result.collision)
+      {
+        ROS_WARN("Collision detected");
+      }
     return true;
   }
 }
