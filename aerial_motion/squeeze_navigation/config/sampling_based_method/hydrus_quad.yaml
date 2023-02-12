@@ -34,7 +34,7 @@ ompl_mode: 0 # RRT_START_MODE
 planning_mode: 2
 
 # planning cost 
-length_cost_thre: 10.0 # TODO
+length_cost_thre: 6.0
 save_path_flag: false # save planning result
 
 # discrete path smoothing filter

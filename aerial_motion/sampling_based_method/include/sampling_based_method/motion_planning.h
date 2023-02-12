@@ -69,6 +69,7 @@
 #include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
 #include <ompl/base/DiscreteMotionValidator.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
+#include <ompl/base/terminationconditions/CostConvergenceTerminationCondition.h>
 
 /* utils */
 #include <iostream>

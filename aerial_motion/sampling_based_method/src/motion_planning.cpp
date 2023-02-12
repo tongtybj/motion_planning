@@ -411,7 +411,11 @@ namespace sampling_base
 
     ros::Time start_time = ros::Time::now();
 
-    if (planner->solve(solving_time_limit_))
+
+    ompl::base::CostConvergenceTerminationCondition tc(pdef_);
+
+
+    if (planner->solve(tc))
       {
         calculation_time_ = ros::Time::now().toSec() - start_time.toSec();
         ompl::base::PathPtr ompl_result = pdef_->getSolutionPath();
