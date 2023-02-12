@@ -402,7 +402,7 @@ namespace sampling_base
     if(ompl_mode_ == RRT_START_MODE)
       {
         pdef_->setOptimizationObjective(length_obj);
-        planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(space_information_));
+        planner = ompl::base::PlannerPtr(new ompl::geometric::RRT(space_information_));
       }
 
     planner->setProblemDefinition(pdef_);
@@ -412,33 +412,44 @@ namespace sampling_base
     ros::Time start_time = ros::Time::now();
 
 
-    ompl::base::CostConvergenceTerminationCondition tc(pdef_);
+    //ompl::base::CostConvergenceTerminationCondition tc(pdef_);
+    auto tc = ompl::base::timedPlannerTerminationCondition(3600);
+    double start = ros::Time::now().toSec();
 
 
     if (planner->solve(tc))
       {
         calculation_time_ = ros::Time::now().toSec() - start_time.toSec();
         ompl::base::PathPtr ompl_result = pdef_->getSolutionPath();
-        std::cout << "Found solution:" << std::endl;
+        ROS_INFO_STREAM("Found init solution in " << ros::Time::now().toSec() - start);
         ompl_result->print(std::cout);
 
-        if(ompl_mode_ == RRT_START_MODE)
-          {
-            std::cout << "iteration is "<< std::static_pointer_cast<ompl::geometric::RRTstar>(planner)->numIterations() << "best cost is " << std::static_pointer_cast<ompl::geometric::RRTstar>(planner)->bestCost()  << std::endl;
-            std::stringstream ss;
-            ss << std::static_pointer_cast<ompl::geometric::RRTstar>(planner)->bestCost();
-            ss >> best_cost_;
-          }
 
-        ROS_ERROR("state count: %d", (int)(std::static_pointer_cast<ompl::geometric::PathGeometric>(ompl_result)->getStateCount()));
-        for(int i = 1; i < (int)(std::static_pointer_cast<ompl::geometric::PathGeometric>(ompl_result)->getStateCount()); i++)
+        ompl::geometric::PathSimplifier path_simplifier(space_information_);
+        ompl::geometric::PathGeometric path_simplier(dynamic_cast<const ompl::geometric::PathGeometric&>(*ompl_result));
+        path_simplifier.simplify(path_simplier, 3600);
+        double start = ros::Time::now().toSec();
+        ROS_INFO_STREAM("Found simplifier solution in " << ros::Time::now().toSec() - start);
+        path_simplier.print(std::cout);
+
+
+
+        // if(ompl_mode_ == RRT_START_MODE)
+        //   {
+        //     std::cout << "iteration is "<< std::static_pointer_cast<ompl::geometric::RRTstar>(planner)->numIterations() << "best cost is " << std::static_pointer_cast<ompl::geometric::RRTstar>(planner)->bestCost()  << std::endl;
+        //     std::stringstream ss;
+        //     ss << std::static_pointer_cast<ompl::geometric::RRTstar>(planner)->bestCost();
+        //     ss >> best_cost_;
+        //   }
+
+        ROS_ERROR_STREAM("state count: " << path_simplier.getStateCount());
+        for(int i = 1; i < (int)(path_simplier.getStateCount()); i++)
           {
             ompl::base::State *state1;
             ompl::base::State *state2;
 
-            state1 = std::static_pointer_cast<ompl::geometric::PathGeometric>(ompl_result)->getState(i - 1);
-
-            state2 = std::static_pointer_cast<ompl::geometric::PathGeometric>(ompl_result)->getState(i);
+            state1 = path_simplier.getState(i - 1);
+            state2 = path_simplier.getState(i);
 
             addState(state1);
             int nd = config_space_->validSegmentCount(state1, state2);

@@ -66,6 +66,8 @@
 #include <ompl/config.h>
 #include <ompl/geometric/PathGeometric.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
+#include <ompl/geometric/planners/rrt/RRT.h>
+#include <ompl/geometric/PathSimplifier.h>
 #include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
 #include <ompl/base/DiscreteMotionValidator.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
